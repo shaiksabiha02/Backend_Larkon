@@ -1,5 +1,5 @@
 import pool from "../config/db.js";
-async function createCouponsTable() {
+async function sTable() {
     await pool.query(
         `
         Create table coupons(

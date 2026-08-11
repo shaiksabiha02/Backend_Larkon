@@ -22,7 +22,7 @@ async function createReviewTable() {
 
         constraint fk_review_order_item
         foreign key (order_item_id)
-        references orders(id)
+        references order_items(id)
         on delete CASCADE
         );
         `
