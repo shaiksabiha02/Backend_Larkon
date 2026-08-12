@@ -2,27 +2,13 @@
   "name": "project-root",
   "version": "1.0.0",
   "type": "module",
-  "description": "",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "bcrypt": "^6.0.0",
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "express-validator": "^7.3.2",
-    "jsonwebtoken": "^9.0.3",
-    "multer": "^2.2.0",
-    "mysql2": "^3.23.2",
-    "pg": "^8.22.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.14"
+    "dev": "nodemon server.js",
+    "migrate:customers": "node src/migrations/customers.js",
+    "migrate:sellers": "node src/migrations/sellers.js",
+    "migrate:notifications": "node src/migrations/notifications.js",
+    "migrate:all": "npm run migrate:customers && npm run migrate:sellers && npm run migrate:notifications"
   }
 }
