@@ -13,9 +13,6 @@ import {
 import {
     calculateCouponDiscount
 } from "../utils/CouponCalculator.js";
-import pool from "../config/db.js";
-import { getOrderTotal } from "../models/CartTotal.model.js";
-import { getOrderItemsForCoupon } from "../models/OrderItems.model.js";
 // create coupom
 
 export const createCouponService = async (couponData)=>{
@@ -23,21 +20,16 @@ export const createCouponService = async (couponData)=>{
         productsIds,
         categoryIds
     }= couponData;
-    // database connection
-    const client = await pool.connect();
-    try{
-    //start transaction
-    await client.query("BEGIN");
+
     // Create main coupon
 
-    const coupon = await createCoupon(client,couponData);
+    const coupon = await createCoupon(couponData);
 
     // Adding selected products
     if(productsIds && productsIds.length >0){
 
         for(const productID of productsIds){
             await addCouponProduct(
-            client,
             coupon.id,
             productID
         ); 
@@ -50,25 +42,14 @@ export const createCouponService = async (couponData)=>{
 
         for(const categoryId of categoryIds){
          await addCouponCategory(
-            client,
             coupon.id,
             categoryId
         );   
         }
        
     }
-  // everything succeeded
-  await client.query("COMMIT");
-return coupon;
 
-} catch(error){
-
-    await client.query("ROLLBACK");
-    throw error;
-
-}finally{
-    client.release();
-}
+    return coupon;
 };
 
 // Get All Coupons
@@ -110,9 +91,9 @@ export const deleteCouponService = async(
 
 export const validateCouponService = async(
     couponCode,
-    orderId
+    cartTotal,
+    cartItems
 )=>{
-
     //finding coupon
 
     const coupon = await getCouponByCode(couponCode);
@@ -120,19 +101,6 @@ export const validateCouponService = async(
         throw new Error("Invalid coupon code.");
     }
 
-    // get order total
-    const order = await getOrderTotal(orderId);
-    if(!order){
-        throw new Error("Order not found.");
-    }
-    const cartTotal = Number(order.total_amount);
-
-    // get products and categoried ids from order_items table
-     const OrderItems = await getOrderItemsForCoupon(orderId);
-
-     if(!OrderItems || OrderItems.length ===0){
-        throw new Error("No items found for this order.");
-     }
     // checking coupon status
     if(coupon.status!=="Active"){
         throw new Error("This coupon is not active");
@@ -169,9 +137,9 @@ export const validateCouponService = async(
 
   const couponProducts = await getCouponProducts(coupon.id);
   if (couponProducts.length > 0){
-    const applicableProduct = OrderItems.some(
+    const applicableProduct = cartItems.some(
         (item)=>
-            couponProducts.some((couponProduct)=>Number(couponProduct.product_id)===Number(item.product_id))
+            couponProducts.some((couponProduct)=>Number(couponProduct.product_id)===Number(item.productId))
     );
     if(!applicableProduct){
         throw new Error(
@@ -184,9 +152,9 @@ export const validateCouponService = async(
 
 const couponcategories = await getCouponCategories(coupon.id);
 if(couponcategories.length > 0){
-    const applicableCategory = OrderItems.some(
+    const applicableCategory = cartItems.some(
         (item)=>couponcategories.some(
-            (couponCategory)=>Number(couponCategory.category_id)===Number(item.category_id)
+            (couponCategory)=>Number(couponCategory.category_id)===Number(item.categoryId)
         )
     );
     if(!applicableCategory){
