@@ -4,7 +4,7 @@ import{
     getAllReviews,
     updateReviewStatus,
     deleteReview
-}from "../Controllers/Review.controller.js";
+}from "../controllers/Review.controller.js";
 
 const router = express.Router();
 //post customer submitting a review
