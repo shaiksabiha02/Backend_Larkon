@@ -50,21 +50,21 @@ const startServer = async () => {
     try {
 
         await pool.query("SELECT NOW()");
-        console.log("✅ Database Connected Successfully");
+        console.log("Database Connected Successfully");
 
         await chatUp();
-        console.log("✅ Team Chat Tables Ready");
+        console.log("Team Chat Tables Ready");
 
         await todoUp();
-        console.log("✅ Todo App Tables Ready");
+        console.log("Todo App Tables Ready");
 
         server.listen(PORT, () => {
-            console.log(`🚀 Server running on http://localhost:${PORT}`);
+            console.log(` Server running on http://localhost:${PORT}`);
         });
 
     } catch (error) {
 
-        console.error("❌ Server Error:", error.message);
+        console.error(" Server Error:", error.message);
         process.exit(1);
 
     }
@@ -76,7 +76,7 @@ process.on("SIGINT", async () => {
 
     await pool.end();
 
-    console.log("✅ Database Disconnected");
+    console.log(" Database Disconnected");
 
     process.exit(0);
 
