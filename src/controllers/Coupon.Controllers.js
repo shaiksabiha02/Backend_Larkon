@@ -93,12 +93,14 @@ export const validateCoupon = async(req,res)=>{
     try{
         const{
             couponCode,
-            orderId
+            cartTotal,
+            cartItems
         }=req.body;
 
         const result = await validateCouponService(
             couponCode,
-            orderId
+            cartTotal,
+            cartItems
         );
         res.status(200).json({
             success:true,

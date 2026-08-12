@@ -1,8 +1,9 @@
 import pool from "../config/db.js";
+import { getDiscountByProductID } from "./Discount.model.js";
 
 // Creating a Coupon
 
-export const createCoupon = async(client,couponData)=>{
+export const createCoupon = async(couponData)=>{
     const {
         couponCode,
         country,
@@ -46,7 +47,7 @@ const values =[
     startDate,
     endDate
 ];
-const result = await client.query(query,values);
+const result = await pool.query(query,values);
 return result.rows[0];
 };
 
@@ -119,32 +120,32 @@ export const updateCoupon = async (
     `
     UPDATE coupons
     SET 
-    coupon_code = COALESCE($1,coupon_code),
-    country = COALESCE($2,country),
-    coupon_type = COALESCE($3,coupon_type),
-    discount_value = COALESCE($4,discount_value),
-    minimum_order_amount =COALESCE($5,minimum_order_amount),
-    maximum_discount_amount = COALESCE($6,maximum_discount_amount),
-    usage_limit =COALESCE($7,usage_limit),
-    status = COALESCE($8,status),
-    start_date = COALESCE($9,start_date),
-    end_date =COALESCE($10,end_date),
+    coupon_code = $1,
+    country = $2,
+    coupon_type = $3,
+    discount_value = $4,
+    minimum_order_amount = $5,
+    maximum_discount_amount = $6,
+    usage_limit = $7,
+    status = $8,
+    start_date = $9,
+    end_date = $10,
     updated_at = CURRENT_TIMESTAMP
     where id = $11
     RETURNING*;
     `;
 
     const values =[
-        couponCode ?? null,
-        country ?? null,
-        couponType ?? null,
-        discountValue ?? null,
-        minimumOrderAmount ?? null,
-        maximumDiscountAmount ?? null,
-        usageLimit ?? null,
-        status ?? null,
-        startDate ?? null,
-        endDate ?? null,
+        couponCode,
+        country,
+        couponType,
+        discountValue,
+        minimumOrderAmount,
+        maximumDiscountAmount,
+        usageLimit,
+        status,
+        startDate,
+        endDate,
         couponId
     ];
 
@@ -201,7 +202,6 @@ export const increaseCouponUsage = async (couponId)=>{
 // ADD product to Coupon
 
 export const addCouponProduct = async(
-    client,
     couponId,
     productId
 )=>{
@@ -217,7 +217,7 @@ export const addCouponProduct = async(
     RETURNING*;
     `;
 
-    const result = await client.query(
+    const result = await pool.query(
         query,
         [couponId,productId]
     );
@@ -227,7 +227,6 @@ export const addCouponProduct = async(
 //Add category to coupon
 
 export const addCouponCategory = async(
-    client,
     couponId,
     categoryId
 )=>{
@@ -243,7 +242,7 @@ export const addCouponCategory = async(
     RETURNING*;
     `;
 
-    const result = await client.query(
+    const result = await pool.query(
         query,
         [couponId,categoryId]
     );

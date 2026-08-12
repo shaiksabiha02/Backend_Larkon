@@ -1,27 +1,24 @@
 import express from "express";
-import{
+
+import {
     createReview,
     getAllReviews,
     updateReviewStatus,
     deleteReview
+<<<<<<< HEAD
 }from "../controllers/Review.controller.js";
+=======
+} from "../Controllers/Review.controller.js";
+>>>>>>> bf3e367e276ce25abab52a1c02a1490d7c3bbb83
 
 const router = express.Router();
-//post customer submitting a review
 
-router.post("/",createReview);
+router.post("/", createReview);
 
-//get reviews
+router.get("/", getAllReviews);
 
-router.get("/",getAllReviews);
+router.patch("/:id/status", updateReviewStatus);
 
-// patch/reviews/id/status
-// admin -approve ,reject
-// private access
+router.delete("/:id", deleteReview);
 
-router.patch("/:id/status",updateReviewStatus);
-
-// delete reviews/:id
-// admin delete it
-router.delete("/:id",deleteReview);
 export default router;

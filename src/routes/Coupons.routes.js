@@ -1,4 +1,5 @@
 import express from "express";
+
 import {
     createCoupon,
     getCoupons,
@@ -9,23 +10,14 @@ import {
 
 const router = express.Router();
 
-// get coupons
+router.get("/", getCoupons);
 
-router.get("/",getCoupons);
+router.post("/", createCoupon);
 
-// post Coupons
+router.put("/:id", updateCoupon);
 
-router.post("/",createCoupon);
+router.delete("/:id", deleteCoupon);
 
-// put through coupon id
-
-router.put("/:id",updateCoupon);
-
-// delete coupon through id
-
-router.delete("/:id",deleteCoupon);
-
-// validate coupon
-router.post("/validate",validateCoupon);
+router.post("/validate", validateCoupon);
 
 export default router;
