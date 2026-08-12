@@ -1,0 +1,21 @@
+const pool = require("../config/db");
+
+const getAllEvents = async () => {
+  const result = await pool.query(`
+    SELECT
+      id,
+      title,
+      description,
+      start_time,
+      end_time,
+      location
+    FROM events
+    ORDER BY id;
+  `);
+
+  return result.rows;
+};
+
+module.exports = {
+  getAllEvents
+};

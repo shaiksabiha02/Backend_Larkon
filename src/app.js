@@ -1,30 +1,36 @@
-import express from "express";
-import cors from "cors";
-import chatRoutes from "./routes/chat.routes.js";
-import todoRoutes from "./routes/todo.routes.js";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import emailRoutes from './routes/emailRoutes.js';
+import emailLabelRoutes from './routes/emailLabelRoutes.js';
+import inboxRoutes from './routes/inboxRoutes.js';
+import calendarRoutes from './routes/calendarRoutes.js';
+import recipientsRoutes from './routes/recipientsRoutes.js';
+
 const app = express();
-// MIDDLEWARES
+
 app.use(cors());
 app.use(express.json());
-// DEBUG LOGS
-app.use((req, res, next) => {
-    console.log("=================================");
-    console.log("METHOD:", req.method);
-    console.log("URL:", req.originalUrl);
-    console.log("CONTENT-TYPE:", req.headers["content-type"]);
-    console.log("GLOBAL BODY:", req.body);
-    console.log("=================================");
 
-    next();
+// Test route
+app.get('/', (req, res) => {
+  res.json({
+    message: " Larkon Backend Running"
+  });
 });
-// HOME ROUTE
-app.get("/", (req, res) => {
-    res.json({
-        message: "API Running"
-    });
-});
-// CHAT ROUTES
-app.use("/api/v1/chat", chatRoutes);
-// TODO ROUTES
-app.use("/api/v1/todos", todoRoutes);
+
+// API Routes - Version 1
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/emails', emailRoutes);
+app.use('/api/v1/email-labels', emailLabelRoutes);
+app.use('/api/v1/inbox', inboxRoutes);
+app.use('/api/v1/calendar', calendarRoutes);
+app.use('/api/v1/recipients', recipientsRoutes);
+
 export default app;
