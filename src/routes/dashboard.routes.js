@@ -1,0 +1,62 @@
+import express from "express";
+
+import {
+    getDashboardSummary,
+    getRecentOrders,
+    getSalesOverview,
+    getTopProducts,
+    getRevenueByCategory,
+    getCustomerGrowth
+} from "../controllers/dashboard.controller.js";
+
+const router = express.Router();
+
+// ========================================
+// Dashboard Main
+// ========================================
+
+router.get("/", getDashboardSummary);
+
+// ========================================
+// Dashboard Summary
+// ========================================
+
+router.get("/summary", getDashboardSummary);
+
+// ========================================
+// Recent Orders
+// ========================================
+
+router.get("/recent-orders", getRecentOrders);
+
+// ========================================
+// Sales Overview
+// ========================================
+
+router.get("/sales-overview", getSalesOverview);
+
+// ========================================
+// Top Products
+// ========================================
+
+router.get("/top-products", getTopProducts);
+
+// ========================================
+// Revenue By Category
+// ========================================
+
+router.get("/revenue-by-category", getRevenueByCategory);
+
+// ========================================
+// Category Sales
+// ========================================
+
+router.get("/category-sales", getRevenueByCategory);
+
+// ========================================
+// Customer Growth
+// ========================================
+
+router.get("/customer-growth", getCustomerGrowth);
+
+export default router;
