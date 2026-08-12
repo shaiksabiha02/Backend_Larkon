@@ -3,7 +3,7 @@ import {
     fetchFaqs,
     fetchHelpCenter,
     fetchPrivacyPolicy
-} from "../controllers/staticPagesController.js";
+} from "../Controllers/staticPagesController.js";
 
 const router = express.Router();
 

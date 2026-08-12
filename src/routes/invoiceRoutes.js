@@ -3,7 +3,7 @@ import {listInvoices,
         fetchInvoiceById,
         sendInvoice,
         downloadInvoice
-} from "../controllers/invoiceController.js";
+} from "../Controllers/invoiceController.js";
 
 
 const router = express.Router();
