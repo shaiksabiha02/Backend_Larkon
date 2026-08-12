@@ -6,7 +6,7 @@ import {
     updateCoupon,
     deleteCoupon,
     validateCoupon
-} from "../Controllers/Coupon.Controllers.js";
+} from "../controllers/Coupon.Controllers.js";
 
 const router = express.Router();
 
