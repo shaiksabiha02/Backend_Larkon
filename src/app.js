@@ -20,7 +20,7 @@ app.use(express.json());
 // Test route
 app.get('/', (req, res) => {
   res.json({
-    message: "✅ Larkon Backend Running"
+    message: " Larkon Backend Running"
   });
 });
 
