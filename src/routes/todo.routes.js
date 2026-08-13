@@ -7,22 +7,23 @@ import {
     updateTodo,
     deleteTodo
 } from "../controllers/todo.controller.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
 // GET ALL
-router.get("/", getTodos);
+router.get("/", authenticate,getTodos);
 
 // GET BY ID
-router.get("/:id", getTodoById);
+router.get("/:id", authenticate,getTodoById);
 
 // CREATE
-router.post("/", createTodo);
+router.post("/",authenticate ,createTodo);
 
 // UPDATE
-router.patch("/:id", updateTodo);
+router.patch("/:id",authenticate, updateTodo);
 
 // DELETE
-router.delete("/:id", deleteTodo);
+router.delete("/:id",authenticate, deleteTodo);
 
 export default router;

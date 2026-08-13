@@ -5,20 +5,20 @@ import {
     getAllReviews,
     updateReviewStatus,
     deleteReview
-<<<<<<< HEAD
+
 }from "../controllers/Review.controller.js";
-=======
-} from "../Controllers/Review.controller.js";
->>>>>>> bf3e367e276ce25abab52a1c02a1490d7c3bbb83
+import { authenticate } from "../middlewares/auth.middleware.js";
+
 
 const router = express.Router();
+//post customer submitting a review
 
 router.post("/", createReview);
 
-router.get("/", getAllReviews);
+router.get("/",authenticate, getAllReviews);
 
-router.patch("/:id/status", updateReviewStatus);
+router.patch("/:id/status",authenticate,updateReviewStatus);
 
-router.delete("/:id", deleteReview);
+router.delete("/:id", authenticate,deleteReview);
 
 export default router;

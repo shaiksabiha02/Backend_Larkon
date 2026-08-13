@@ -1,10 +1,9 @@
 import express from 'express';
 const router = express.Router();
 import orderController from '../controllers/orderController.js';
-import authenticateToken from '../middlewares/auth.js'
+import { authenticate } from '../middlewares/auth.middleware.js';
 
-
-
+router.use(authenticate)
 router.get('/', orderController.listOrders);
 router.get('/received', orderController.getReceivedOrders);
 router.get('/:id', orderController.getOrderById);

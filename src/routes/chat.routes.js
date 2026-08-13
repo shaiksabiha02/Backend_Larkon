@@ -15,9 +15,9 @@ import {
     fetchUnreadMessages,
     uploadAttachment
 } from "../controllers/chat.controller.js";
-
+import { authenticate } from "../middlewares/auth.middleware.js";
 const router = express.Router();
-
+router.use(authenticate);
 // GET ALL CONVERSATIONS
 router.get("/conversations", fetchConversations);
 

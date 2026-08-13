@@ -5,10 +5,10 @@ import {
   getCustomerById,
   updateCustomerStatus,
 } from "../controllers/customerController.js";
-
+import { authenticate } from "../middlewares/auth.middleware.js";
 const router = express.Router();
 
-
+router.use(authenticate);
 // Get all customers
 router.get("/", getAllCustomers);
 

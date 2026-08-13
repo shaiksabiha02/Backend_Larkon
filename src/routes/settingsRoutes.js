@@ -8,13 +8,15 @@ import {
     changeAdminPasswordController
 } from "../Controllers/settingsController.js";
 
+import { authenticate } from "../middlewares/auth.middleware.js";
+
 
 const router = express.Router();
 
-router.get("/general", fetchGeneralSettings);
-router.put("/general", editGeneralSettings);
-router.get("/profile",fetchAdminProfile);
-router.put("/profile",editAdminProfile);
-router.put("/profile/password",changeAdminPasswordController);
+router.get("/general", authenticate,fetchGeneralSettings);
+router.put("/general",authenticate, editGeneralSettings);
+router.get("/profile",authenticate,fetchAdminProfile);
+router.put("/profile",authenticate,editAdminProfile);
+router.put("/profile/password",authenticate,changeAdminPasswordController);
 
 export default router;

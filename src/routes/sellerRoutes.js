@@ -5,10 +5,10 @@ import {
   createSeller,
   updateSellerStatus,
 } from "../controllers/sellerController.js";
-
+import { authenticate } from "../middlewares/auth.middleware.js";
 const router = express.Router();
 
-
+router.use(authenticate);
 // Get all sellers
 router.get("/", getAllSellers);
 

@@ -4,13 +4,13 @@ import {listInvoices,
         sendInvoice,
         downloadInvoice
 } from "../Controllers/invoiceController.js";
-
+import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/invoices", listInvoices);
-router.get("/invoices/:id", fetchInvoiceById);
-router.post("/invoices/:id/send",sendInvoice);
-router.get("/invoices/:id/download", downloadInvoice);
+router.get("/invoices", authenticate,listInvoices);
+router.get("/invoices/:id", authenticate,fetchInvoiceById);
+router.post("/invoices/:id/send",authenticate,sendInvoice);
+router.get("/invoices/:id/download", authenticate,downloadInvoice);
 
 export default router;
