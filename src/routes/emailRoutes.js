@@ -86,8 +86,8 @@ router.get("/:id", async (req, res) => {
 // CREATE / SEND EMAIL
 // POST /api/emails
 // =====================================================
-router.post("/", async (req, res) => {
-  try {
+router.post("/send", async (req, res) => {
+try {
     const {
       sender_id,
       receiver_email,
