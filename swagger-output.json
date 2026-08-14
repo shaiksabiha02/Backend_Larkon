@@ -713,6 +713,9 @@
                 },
                 "shipping_address": {
                   "example": "any"
+                },
+                "couponCode": {
+                  "example": "any"
                 }
               }
             }

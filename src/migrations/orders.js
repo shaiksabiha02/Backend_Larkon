@@ -2,8 +2,7 @@ import Pool from "../config/db.js";
 async function createOrdersTable() {
     await Pool.query(`
            
-        
-  CREATE TYPE order_status AS ENUM ('received', 'processing', 'shipped', 'delivered', 'cancelled');
+CREATE TYPE order_status AS ENUM ('received', 'processing', 'shipped', 'delivered', 'cancelled');
             CREATE TYPE order_priority AS ENUM ('low','normal' ,'medium', 'high');
             CREATE TYPE ORDER_PAYMENT_STATUS AS ENUM ('pending', 'completed', 'failed','refunded');
         
@@ -22,6 +21,8 @@ async function createOrdersTable() {
                 CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     
     );
+ 
+
 
             
     `);
@@ -33,3 +34,5 @@ async function createOrdersTable() {
 
 
 
+       
+  
