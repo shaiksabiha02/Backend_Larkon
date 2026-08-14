@@ -55,6 +55,7 @@ export async function getInvoices() {
     };
 }
 
+
 // 2. Get invoice details
 export async function getInvoiceById(id) {
     const invoiceResult = await pool.query(
@@ -65,7 +66,6 @@ export async function getInvoiceById(id) {
             i.orders_id AS order_id,
 
             o.created_at AS order_date,
-            o.total_amount AS order_total,
             o.payment_status,
             o.status AS order_status,
             o.shipping_address,
@@ -93,7 +93,9 @@ export async function getInvoiceById(id) {
 
     const invoice = invoiceResult.rows[0];
 
+
     // Get order items
+    // Tax is taken from order_items.tax
     const itemsResult = await pool.query(
         `
         SELECT
@@ -103,15 +105,7 @@ export async function getInvoiceById(id) {
             p.size,
             oi.quantity,
             oi.price,
-            oi.tax,
-
-            (
-                oi.price * oi.quantity
-            ) AS item_subtotal,
-
-            (
-                oi.tax * oi.quantity
-            ) AS item_tax
+            oi.tax
 
         FROM order_items oi
         JOIN products p
@@ -124,14 +118,22 @@ export async function getInvoiceById(id) {
         [invoice.order_id]
     );
 
+
     // Calculate subtotal and tax
     let subtotal = 0;
     let tax = 0;
 
     for (const item of itemsResult.rows) {
-        subtotal += Number(item.price) * Number(item.quantity);
-        tax += Number(item.tax) * Number(item.quantity);
+        const itemSubtotal =
+            Number(item.price) * Number(item.quantity);
+
+        const itemTax =
+            Number(item.tax) * Number(item.quantity);
+
+        subtotal += itemSubtotal;
+        tax += itemTax;
     }
+
 
     // Find active coupon
     const couponResult = await pool.query(
@@ -165,51 +167,93 @@ export async function getInvoiceById(id) {
         [invoice.order_id]
     );
 
+
     let discount = 0;
     let appliedCoupon = null;
+
 
     // Calculate coupon discount
     if (couponResult.rows.length > 0) {
         const coupon = couponResult.rows[0];
 
-        if (
-            subtotal >=
-            Number(coupon.minimum_order_amount || 0)
-        ) {
+        const minimumOrderAmount =
+            Number(coupon.minimum_order_amount || 0);
+
+        // Coupon applies only if minimum order amount is reached
+        if (subtotal >= minimumOrderAmount) {
+
+            // Percentage coupon
             if (coupon.coupon_type === "percentage") {
                 discount =
                     subtotal *
                     (Number(coupon.discount_value) / 100);
-            } else if (coupon.coupon_type === "fixed") {
-                discount = Number(coupon.discount_value);
             }
 
+            // Fixed coupon
+            else if (coupon.coupon_type === "fixed") {
+                discount =
+                    Number(coupon.discount_value);
+            }
+
+
+            // Apply maximum discount limit
             if (
                 coupon.maximum_discount_amount !== null &&
-                discount > Number(coupon.maximum_discount_amount)
+                discount >
+                    Number(coupon.maximum_discount_amount)
             ) {
-                discount = Number(coupon.maximum_discount_amount);
+                discount =
+                    Number(coupon.maximum_discount_amount);
             }
 
+
+            // Discount cannot exceed subtotal
             if (discount > subtotal) {
                 discount = subtotal;
             }
 
+
             appliedCoupon = {
                 coupon_code: coupon.coupon_code,
                 coupon_type: coupon.coupon_type,
-                discount_value: coupon.discount_value
+                discount_value: Number(
+                    coupon.discount_value
+                ).toFixed(2)
             };
         }
     }
 
-    const items = itemsResult.rows.map(item => ({
-        ...item,
-        item_discount: 0,
-        item_total:
-            Number(item.price) *
-            Number(item.quantity)
-    }));
+
+    // Prepare invoice items
+    const items = itemsResult.rows.map(item => {
+
+        const itemSubtotal =
+            Number(item.price) * Number(item.quantity);
+
+        const itemTax =
+            Number(item.tax) * Number(item.quantity);
+
+        // Item total before invoice-level coupon
+        const itemTotal =
+            itemSubtotal + itemTax;
+
+        return {
+            id: item.order_item_id,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            size: item.size,
+            quantity: item.quantity,
+            price: Number(item.price).toFixed(2),
+            tax: Number(item.tax).toFixed(2),
+            total: itemTotal.toFixed(2)
+        };
+    });
+
+
+    // Final invoice calculation
+    const grandTotal =
+        subtotal - discount + tax;
+
 
     return {
         invoice: {
@@ -237,10 +281,11 @@ export async function getInvoiceById(id) {
             subtotal: subtotal.toFixed(2),
             discount: discount.toFixed(2),
             tax: tax.toFixed(2),
-            grand_total: Number(invoice.order_total).toFixed(2)
+            grand_total: grandTotal.toFixed(2)
         }
     };
 }
+
 
 // 3. Send invoice email
 export async function sendInvoiceEmail(id) {
@@ -272,6 +317,7 @@ export async function sendInvoiceEmail(id) {
         `Mock email sent to ${invoice.email} for invoice ${invoice.invoice_number}`
     );
 
+
     const logResult = await pool.query(
         `
         INSERT INTO invoice_email_logs
@@ -295,6 +341,7 @@ export async function sendInvoiceEmail(id) {
         ]
     );
 
+
     return {
         invoice_id: invoice.id,
         invoice_number: invoice.invoice_number,
@@ -303,6 +350,7 @@ export async function sendInvoiceEmail(id) {
         sent_at: logResult.rows[0].sent_at
     };
 }
+
 
 // 4. Generate invoice PDF data
 export async function generateInvoicePDF(id) {
@@ -314,7 +362,6 @@ export async function generateInvoicePDF(id) {
             i.orders_id AS order_id,
 
             o.created_at AS order_date,
-            o.total_amount AS order_total,
             o.payment_status,
             o.status AS order_status,
             o.shipping_address,
@@ -341,7 +388,9 @@ export async function generateInvoicePDF(id) {
 
     const invoice = invoiceResult.rows[0];
 
+
     // Get order items
+    // Tax is taken from order_items.tax
     const itemsResult = await pool.query(
         `
         SELECT
@@ -351,15 +400,7 @@ export async function generateInvoicePDF(id) {
             p.size,
             oi.quantity,
             oi.price,
-            oi.tax,
-
-            (
-                oi.price * oi.quantity
-            ) AS item_subtotal,
-
-            (
-                oi.tax * oi.quantity
-            ) AS item_tax
+            oi.tax
 
         FROM order_items oi
         JOIN products p
@@ -372,13 +413,22 @@ export async function generateInvoicePDF(id) {
         [invoice.order_id]
     );
 
+
+    // Calculate subtotal and tax
     let subtotal = 0;
     let tax = 0;
 
     for (const item of itemsResult.rows) {
-        subtotal += Number(item.price) * Number(item.quantity);
-        tax += Number(item.tax) * Number(item.quantity);
+        const itemSubtotal =
+            Number(item.price) * Number(item.quantity);
+
+        const itemTax =
+            Number(item.tax) * Number(item.quantity);
+
+        subtotal += itemSubtotal;
+        tax += itemTax;
     }
+
 
     // Find active coupon
     const couponResult = await pool.query(
@@ -412,48 +462,113 @@ export async function generateInvoicePDF(id) {
         [invoice.order_id]
     );
 
+
     let discount = 0;
     let appliedCoupon = null;
+
 
     // Calculate coupon discount
     if (couponResult.rows.length > 0) {
         const coupon = couponResult.rows[0];
 
-        if (
-            subtotal >=
-            Number(coupon.minimum_order_amount || 0)
-        ) {
+        const minimumOrderAmount =
+            Number(coupon.minimum_order_amount || 0);
+
+        // Coupon applies only if minimum order amount is reached
+        if (subtotal >= minimumOrderAmount) {
+
+            // Percentage coupon
             if (coupon.coupon_type === "percentage") {
                 discount =
                     subtotal *
                     (Number(coupon.discount_value) / 100);
-            } else if (coupon.coupon_type === "fixed") {
-                discount = Number(coupon.discount_value);
             }
 
+            // Fixed coupon
+            else if (coupon.coupon_type === "fixed") {
+                discount =
+                    Number(coupon.discount_value);
+            }
+
+
+            // Apply maximum discount limit
             if (
                 coupon.maximum_discount_amount !== null &&
-                discount > Number(coupon.maximum_discount_amount)
+                discount >
+                    Number(coupon.maximum_discount_amount)
             ) {
-                discount = Number(coupon.maximum_discount_amount);
+                discount =
+                    Number(coupon.maximum_discount_amount);
             }
 
+
+            // Discount cannot exceed subtotal
             if (discount > subtotal) {
                 discount = subtotal;
             }
 
+
             appliedCoupon = {
                 coupon_code: coupon.coupon_code,
                 coupon_type: coupon.coupon_type,
-                discount_value: coupon.discount_value
+                discount_value: Number(
+                    coupon.discount_value
+                ).toFixed(2)
             };
         }
     }
 
-    return {
-        invoice,
 
-        items: itemsResult.rows,
+    // Prepare PDF items
+    const items = itemsResult.rows.map(item => {
+
+        const itemSubtotal =
+            Number(item.price) * Number(item.quantity);
+
+        const itemTax =
+            Number(item.tax) * Number(item.quantity);
+
+        const itemTotal =
+            itemSubtotal + itemTax;
+
+        return {
+            id: item.order_item_id,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            size: item.size,
+            quantity: item.quantity,
+            price: Number(item.price).toFixed(2),
+            tax: Number(item.tax).toFixed(2),
+            subtotal: itemSubtotal.toFixed(2),
+            item_tax: itemTax.toFixed(2),
+            total: itemTotal.toFixed(2)
+        };
+    });
+
+
+    // Final invoice calculation
+    const grandTotal =
+        subtotal - discount + tax;
+
+
+    return {
+        invoice: {
+            id: invoice.invoice_id,
+            invoice_number: invoice.invoice_number,
+            order_id: invoice.order_id,
+            order_date: invoice.order_date,
+            payment_status: invoice.payment_status,
+            order_status: invoice.order_status,
+            shipping_address: invoice.shipping_address
+        },
+
+        billing: {
+            name: `${invoice.first_name} ${invoice.last_name}`,
+            email: invoice.email,
+            phone: invoice.phone
+        },
+
+        items,
 
         coupon: appliedCoupon,
 
@@ -461,7 +576,7 @@ export async function generateInvoicePDF(id) {
             subtotal: subtotal.toFixed(2),
             discount: discount.toFixed(2),
             tax: tax.toFixed(2),
-            total: Number(invoice.order_total).toFixed(2)
+            grand_total: grandTotal.toFixed(2)
         }
     };
 }
