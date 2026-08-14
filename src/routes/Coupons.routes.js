@@ -6,17 +6,18 @@ import {
     updateCoupon,
     deleteCoupon,
     validateCoupon
-} from "../Controllers/Coupon.Controllers.js";
+} from "../controllers/Coupon.Controllers.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/", getCoupons);
+router.get("/",authenticate, getCoupons);
 
-router.post("/", createCoupon);
+router.post("/", authenticate,createCoupon);
 
-router.put("/:id", updateCoupon);
+router.put("/:id",authenticate, updateCoupon);
 
-router.delete("/:id", deleteCoupon);
+router.delete("/:id", authenticate,deleteCoupon);
 
 router.post("/validate", validateCoupon);
 
