@@ -1,4 +1,5 @@
 import Pool from '../config/db.js';
+import {calculateCouponDiscount} from '../utils/CouponCalculator.js'
 
 // Get Cart Items
 export const getCart = async (req, res) => {
@@ -71,7 +72,7 @@ export const removeCartItem = async (req, res) => {
 export const checkoutCart = async (req, res) => {
     const client = await Pool.connect();
     try {
-        const { userId,shipping_address } = req.body;
+        const { userId,shipping_address,couponCode} = req.body;
         
         await client.query('BEGIN');
 
@@ -103,6 +104,19 @@ export const checkoutCart = async (req, res) => {
             totalAmount += Number(item.price) * item.quantity;
             totalItemsCount += item.quantity;
         });
+        let finalTotal = totalAmount;
+        let discountAmount =0;
+
+        if(couponCode){
+            const couponRes = await client.query(`SELECT * FROM coupons WHERE UPPER(coupon_code) = UPPER($1) AND status =$2`,[couponCode,'Active']);
+
+            if (couponRes.rows.length>0){
+                const coupon = couponRes.rows[0];
+                const calculation = calculateCouponDiscount(coupon, totalAmount);
+                finalTotal = calculation.finalTotal;
+                discountAmount = calculation.discountAmount;
+            }
+        }
 
         // Insert into orders table matching new columns
         const orderQuery = `
@@ -110,7 +124,7 @@ export const checkoutCart = async (req, res) => {
             VALUES ($1, $2, $3, 'received', 'normal', 'pending',$4) 
             RETURNING *;
         `;
-        const orderResult = await client.query(orderQuery, [userId, totalAmount, totalItemsCount,shipping_address]);
+        const orderResult = await client.query(orderQuery, [userId, finalTotal, totalItemsCount,shipping_address]);
         const orderId = orderResult.rows[0].id;
 
         // Insert into order_items
@@ -125,7 +139,7 @@ export const checkoutCart = async (req, res) => {
         await client.query('DELETE FROM cart_items WHERE cart_id = $1', [cartId]);
 
         await client.query('COMMIT');
-        res.status(201).json({ success: true, message: 'Order created successfully', order: orderResult.rows[0] });
+        res.status(201).json({ success: true, message: 'Order created successfully', order: orderResult.rows[0],checkoutSummary: { cartTotal: totalAmount, discountAmount: discountAmount, finalTotal: finalTotal } });
     } catch (error) {
         await client.query('ROLLBACK');
         res.status(500).json({ success: false, message: error.message });
