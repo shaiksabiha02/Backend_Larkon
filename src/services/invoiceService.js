@@ -1,8 +1,7 @@
 import pool from "../config/db.js";
 
-//1. Getting invoices
+// 1. Get all invoices
 export async function getInvoices() {
-
     const summaryResult = await pool.query(`
         SELECT
             COUNT(*) AS total_invoice,
@@ -36,10 +35,8 @@ export async function getInvoices() {
             o.status AS order_status
 
         FROM invoices i
-
         JOIN orders o
             ON i.orders_id = o.id
-
         JOIN users u
             ON o.user_id = u.id
 
@@ -58,10 +55,8 @@ export async function getInvoices() {
     };
 }
 
-// 2. Getting invoice details by id
+// 2. Get invoice details
 export async function getInvoiceById(id) {
-
-    // Get invoice, order and customer information
     const invoiceResult = await pool.query(
         `
         SELECT
@@ -82,10 +77,8 @@ export async function getInvoiceById(id) {
             u.phone
 
         FROM invoices i
-
         JOIN orders o
             ON i.orders_id = o.id
-
         JOIN users u
             ON o.user_id = u.id
 
@@ -100,33 +93,29 @@ export async function getInvoiceById(id) {
 
     const invoice = invoiceResult.rows[0];
 
-    // Get products belonging to the order
+    // Get order items
     const itemsResult = await pool.query(
         `
         SELECT
-            oi.id,
+            oi.id AS order_item_id,
             oi.product_id,
             p.product_name,
             p.size,
             oi.quantity,
             oi.price,
-
-            COALESCE(d.discount, 0) AS discount,
-            p.tax,
+            oi.tax,
 
             (
                 oi.price * oi.quantity
-                - COALESCE(d.discount, 0) * oi.quantity
-                + p.tax * oi.quantity
-            ) AS total
+            ) AS item_subtotal,
+
+            (
+                oi.tax * oi.quantity
+            ) AS item_tax
 
         FROM order_items oi
-
         JOIN products p
             ON oi.product_id = p.id
-
-        LEFT JOIN discounts d
-            ON oi.product_id = d.product_id
 
         WHERE oi.order_id = $1
 
@@ -135,39 +124,92 @@ export async function getInvoiceById(id) {
         [invoice.order_id]
     );
 
-    // Calculate subtotal, discount and tax
-    const summaryResult = await pool.query(
+    // Calculate subtotal and tax
+    let subtotal = 0;
+    let tax = 0;
+
+    for (const item of itemsResult.rows) {
+        subtotal += Number(item.price) * Number(item.quantity);
+        tax += Number(item.tax) * Number(item.quantity);
+    }
+
+    // Find active coupon
+    const couponResult = await pool.query(
         `
-        SELECT
-            COALESCE(
-                SUM(oi.price * oi.quantity),
-                0
-            ) AS subtotal,
+        SELECT DISTINCT
+            c.id,
+            c.coupon_code,
+            c.coupon_type,
+            c.discount_value,
+            c.minimum_order_amount,
+            c.maximum_discount_amount
 
-            COALESCE(
-                SUM(COALESCE(d.discount, 0) * oi.quantity),
-                0
-            ) AS discount,
-
-            COALESCE(
-                SUM(p.tax * oi.quantity),
-                0
-            ) AS tax
-
-        FROM order_items oi
-
-        JOIN products p
-            ON oi.product_id = p.id
-
-        LEFT JOIN discounts d
-            ON oi.product_id = d.product_id
+        FROM coupons c
+        JOIN coupon_products cp
+            ON c.id = cp.coupon_id
+        JOIN order_items oi
+            ON cp.product_id = oi.product_id
 
         WHERE oi.order_id = $1
+          AND c.status = 'Active'
+          AND c.start_date <= CURRENT_TIMESTAMP
+          AND c.end_date >= CURRENT_TIMESTAMP
+          AND (
+              c.usage_limit IS NULL
+              OR c.used_count < c.usage_limit
+          )
+
+        ORDER BY c.id
+        LIMIT 1
         `,
         [invoice.order_id]
     );
 
-    const summary = summaryResult.rows[0];
+    let discount = 0;
+    let appliedCoupon = null;
+
+    // Calculate coupon discount
+    if (couponResult.rows.length > 0) {
+        const coupon = couponResult.rows[0];
+
+        if (
+            subtotal >=
+            Number(coupon.minimum_order_amount || 0)
+        ) {
+            if (coupon.coupon_type === "percentage") {
+                discount =
+                    subtotal *
+                    (Number(coupon.discount_value) / 100);
+            } else if (coupon.coupon_type === "fixed") {
+                discount = Number(coupon.discount_value);
+            }
+
+            if (
+                coupon.maximum_discount_amount !== null &&
+                discount > Number(coupon.maximum_discount_amount)
+            ) {
+                discount = Number(coupon.maximum_discount_amount);
+            }
+
+            if (discount > subtotal) {
+                discount = subtotal;
+            }
+
+            appliedCoupon = {
+                coupon_code: coupon.coupon_code,
+                coupon_type: coupon.coupon_type,
+                discount_value: coupon.discount_value
+            };
+        }
+    }
+
+    const items = itemsResult.rows.map(item => ({
+        ...item,
+        item_discount: 0,
+        item_total:
+            Number(item.price) *
+            Number(item.quantity)
+    }));
 
     return {
         invoice: {
@@ -187,32 +229,31 @@ export async function getInvoiceById(id) {
             phone: invoice.phone
         },
 
-        items: itemsResult.rows,
+        items,
+
+        coupon: appliedCoupon,
 
         summary: {
-            subtotal: summary.subtotal,
-            discount: summary.discount,
-            tax: summary.tax,
-            grand_total: invoice.order_total
+            subtotal: subtotal.toFixed(2),
+            discount: discount.toFixed(2),
+            tax: tax.toFixed(2),
+            grand_total: Number(invoice.order_total).toFixed(2)
         }
     };
 }
 
-//3. Send invoice email
+// 3. Send invoice email
 export async function sendInvoiceEmail(id) {
-
-    // Get invoice and customer email
     const invoiceResult = await pool.query(
         `
         SELECT
             i.id,
             i.invoice_number,
             u.email
-        FROM invoices i
 
+        FROM invoices i
         JOIN orders o
             ON i.orders_id = o.id
-
         JOIN users u
             ON o.user_id = u.id
 
@@ -221,19 +262,16 @@ export async function sendInvoiceEmail(id) {
         [id]
     );
 
-    // Invoice not found
     if (invoiceResult.rows.length === 0) {
         return null;
     }
 
     const invoice = invoiceResult.rows[0];
 
-    // Simulate sending the email
     console.log(
         `Mock email sent to ${invoice.email} for invoice ${invoice.invoice_number}`
     );
 
-    // Store email attempt in invoice_email_logs
     const logResult = await pool.query(
         `
         INSERT INTO invoice_email_logs
@@ -266,12 +304,8 @@ export async function sendInvoiceEmail(id) {
     };
 }
 
-
-
 // 4. Generate invoice PDF data
 export async function generateInvoicePDF(id) {
-
-    // Get invoice, order and customer information
     const invoiceResult = await pool.query(
         `
         SELECT
@@ -280,6 +314,7 @@ export async function generateInvoicePDF(id) {
             i.orders_id AS order_id,
 
             o.created_at AS order_date,
+            o.total_amount AS order_total,
             o.payment_status,
             o.status AS order_status,
             o.shipping_address,
@@ -290,10 +325,8 @@ export async function generateInvoicePDF(id) {
             u.phone
 
         FROM invoices i
-
         JOIN orders o
             ON i.orders_id = o.id
-
         JOIN users u
             ON o.user_id = u.id
 
@@ -302,39 +335,35 @@ export async function generateInvoicePDF(id) {
         [id]
     );
 
-    // Invoice not found
     if (invoiceResult.rows.length === 0) {
         return null;
     }
 
     const invoice = invoiceResult.rows[0];
 
-    // Get products/items from the order
+    // Get order items
     const itemsResult = await pool.query(
         `
         SELECT
+            oi.id AS order_item_id,
             oi.product_id,
             p.product_name,
             p.size,
             oi.quantity,
             oi.price,
-
-            COALESCE(d.discount, 0) AS discount,
-            p.tax,
+            oi.tax,
 
             (
                 oi.price * oi.quantity
-                - COALESCE(d.discount, 0) * oi.quantity
-                + p.tax * oi.quantity
-            ) AS total
+            ) AS item_subtotal,
+
+            (
+                oi.tax * oi.quantity
+            ) AS item_tax
 
         FROM order_items oi
-
         JOIN products p
             ON oi.product_id = p.id
-
-        LEFT JOIN discounts d
-            ON oi.product_id = d.product_id
 
         WHERE oi.order_id = $1
 
@@ -343,34 +372,96 @@ export async function generateInvoicePDF(id) {
         [invoice.order_id]
     );
 
-    // Calculate invoice summary
     let subtotal = 0;
-    let discount = 0;
     let tax = 0;
 
     for (const item of itemsResult.rows) {
-
-        const price = Number(item.price);
-        const quantity = Number(item.quantity);
-        const itemDiscount = Number(item.discount);
-        const itemTax = Number(item.tax);
-
-        subtotal += price * quantity;
-        discount += itemDiscount * quantity;
-        tax += itemTax * quantity;
+        subtotal += Number(item.price) * Number(item.quantity);
+        tax += Number(item.tax) * Number(item.quantity);
     }
 
-    const total = subtotal - discount + tax;
+    // Find active coupon
+    const couponResult = await pool.query(
+        `
+        SELECT DISTINCT
+            c.id,
+            c.coupon_code,
+            c.coupon_type,
+            c.discount_value,
+            c.minimum_order_amount,
+            c.maximum_discount_amount
+
+        FROM coupons c
+        JOIN coupon_products cp
+            ON c.id = cp.coupon_id
+        JOIN order_items oi
+            ON cp.product_id = oi.product_id
+
+        WHERE oi.order_id = $1
+          AND c.status = 'Active'
+          AND c.start_date <= CURRENT_TIMESTAMP
+          AND c.end_date >= CURRENT_TIMESTAMP
+          AND (
+              c.usage_limit IS NULL
+              OR c.used_count < c.usage_limit
+          )
+
+        ORDER BY c.id
+        LIMIT 1
+        `,
+        [invoice.order_id]
+    );
+
+    let discount = 0;
+    let appliedCoupon = null;
+
+    // Calculate coupon discount
+    if (couponResult.rows.length > 0) {
+        const coupon = couponResult.rows[0];
+
+        if (
+            subtotal >=
+            Number(coupon.minimum_order_amount || 0)
+        ) {
+            if (coupon.coupon_type === "percentage") {
+                discount =
+                    subtotal *
+                    (Number(coupon.discount_value) / 100);
+            } else if (coupon.coupon_type === "fixed") {
+                discount = Number(coupon.discount_value);
+            }
+
+            if (
+                coupon.maximum_discount_amount !== null &&
+                discount > Number(coupon.maximum_discount_amount)
+            ) {
+                discount = Number(coupon.maximum_discount_amount);
+            }
+
+            if (discount > subtotal) {
+                discount = subtotal;
+            }
+
+            appliedCoupon = {
+                coupon_code: coupon.coupon_code,
+                coupon_type: coupon.coupon_type,
+                discount_value: coupon.discount_value
+            };
+        }
+    }
 
     return {
         invoice,
+
         items: itemsResult.rows,
+
+        coupon: appliedCoupon,
 
         summary: {
             subtotal: subtotal.toFixed(2),
             discount: discount.toFixed(2),
             tax: tax.toFixed(2),
-            total: total.toFixed(2)
+            total: Number(invoice.order_total).toFixed(2)
         }
     };
 }
