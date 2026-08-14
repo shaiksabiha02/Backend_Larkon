@@ -33,6 +33,7 @@ import attributeRoutes from "./src/routes/Attribute.routes.js";
 
 dotenv.config();
 
+<<<<<<< Updated upstream
 const app = express();
 
 
@@ -246,13 +247,39 @@ import { Server } from "socket.io";
 
 import chatRoutes from "./src/routes/chat.routes.js";
 import todoRoutes from "./src/routes/todo.routes.js";
+=======
+import express from "express";
+import cors from "cors";
+import http from "http";
+import { Server } from "socket.io";
+
+import chatRoutes from "./src/routes/chat.routes.js";
+import todoRoutes from "./src/routes/todo.routes.js";
+import pool from "./src/config/db.js";
+>>>>>>> Stashed changes
 import chatSocket from "./src/sockets/chat.socket.js";
 
 import { up as chatUp } from "./src/migrations/chat.js";
 import { up as todoUp } from "./src/migrations/todo.js";
 
+<<<<<<< Updated upstream
 
 
+=======
+// Express App
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Home Route - API Health Check
+app.get("/", (req, res) => {
+    res.json({
+        message: "API Running"
+    });
+});
+>>>>>>> Stashed changes
 
 // API Routes
 app.use("/api/v1/chat", chatRoutes);
@@ -292,6 +319,7 @@ app.set("io", io);
 // Initialize Chat Socket
 chatSocket(io);
 
+<<<<<<< Updated upstream
 
 // Export Socket.IO Instance
 export { io };
@@ -307,9 +335,40 @@ import recipientsRoutes from './src/routes/recipientsRoutes.js';
 
 
 
+=======
+// Server Port
+const PORT = process.env.PORT || 5009;
+
+// Start Server
+const startServer = async () => {
+    try {
+        // Check Database Connection
+        await pool.query("SELECT NOW()");
+        console.log("✅ Database Connected Successfully");
+
+        // Initialize Chat Tables
+        await chatUp();
+        console.log("✅ Team Chat Tables Ready");
+
+        // Initialize Todo Tables
+        await todoUp();
+        console.log("✅ Todo App Tables Ready");
+
+        // Start HTTP Server
+        server.listen(PORT, () => {
+            console.log(` Server running on http://localhost:${PORT}`);
+        });
+
+    } catch (error) {
+        console.error("❌ Server Error:", error.message);
+        process.exit(1);
+    }
+};
+>>>>>>> Stashed changes
 
 // API Routes - Version 1
 
+<<<<<<< Updated upstream
 app.use('/api/v1/emails',authenticate, emailRoutes);
 app.use('/api/v1/email-labels',authenticate, emailLabelRoutes);
 app.use('/api/v1/inbox', authenticate,inboxRoutes);
@@ -353,3 +412,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+=======
+// Export Socket.IO Instance
+export { io };
+>>>>>>> Stashed changes
