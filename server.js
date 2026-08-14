@@ -35,6 +35,9 @@ dotenv.config();
 
 const app = express();
 
+
+
+
 // ========================================
 // Swagger Documentation
 // ========================================
@@ -243,26 +246,12 @@ import { Server } from "socket.io";
 
 import chatRoutes from "./src/routes/chat.routes.js";
 import todoRoutes from "./src/routes/todo.routes.js";
-
-
-
 import chatSocket from "./src/sockets/chat.socket.js";
 
 import { up as chatUp } from "./src/migrations/chat.js";
 import { up as todoUp } from "./src/migrations/todo.js";
 
 
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Home Route - API Health Check
-app.get("/", (req, res) => {
-    res.json({
-        message: "API Running"
-    });
-});
 
 
 // API Routes
@@ -303,6 +292,11 @@ app.set("io", io);
 // Initialize Chat Socket
 chatSocket(io);
 
+
+// Export Socket.IO Instance
+export { io };
+
+
 //Email and calender
 
 import emailRoutes from './src/routes/emailRoutes.js';
@@ -313,34 +307,6 @@ import recipientsRoutes from './src/routes/recipientsRoutes.js';
 
 
 
-// Server Port
-const PORT = process.env.PORT || 5009;
-
-// Start Server
-const startServer = async () => {
-    try {
-        // Check Database Connection
-        await pool.query("SELECT NOW()");
-        console.log("✅ Database Connected Successfully");
-
-        // Initialize Chat Tables
-        await chatUp();
-        console.log("✅ Team Chat Tables Ready");
-
-        // Initialize Todo Tables
-        await todoUp();
-        console.log("✅ Todo App Tables Ready");
-
-        // Start HTTP Server
-        server.listen(PORT, () => {
-            console.log(` Server running on http://localhost:${PORT}`);
-        });
-
-    } catch (error) {
-        console.error("❌ Server Error:", error.message);
-        process.exit(1);
-    }
-};
 
 // API Routes - Version 1
 
@@ -382,10 +348,8 @@ app.use((req, res) => {
 // Server
 
 
+const PORT = process.env.PORT || 3000;
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
-// Export Socket.IO Instance
-export { io };
-
