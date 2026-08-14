@@ -22,7 +22,6 @@
     "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.2.0",
-<<<<<<< Updated upstream
     "mysql2": "^3.23.2",
     "pdfkit": "^0.19.1",
     "pg": "^8.23.0",
@@ -31,15 +30,6 @@
     "swagger-jsdoc": "^6.3.0",
     "swagger-ui-express": "^5.0.1",
     "xlsx": "^0.18.5"
-=======
-    "multer-storage-cloudinary": "^4.0.0",
-    "pg": "^8.22.0",
-    "pg-hstore": "^2.3.4",
-    "sequelize": "^6.37.8",
-    "socket.io": "^4.7.2",
-    "socket.io-client": "^4.8.3"
-  
->>>>>>> Stashed changes
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
