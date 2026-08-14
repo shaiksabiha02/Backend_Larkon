@@ -5,7 +5,7 @@ import {
     editGeneralSettings,
     fetchAdminProfile,
     editAdminProfile,
-    changeAdminPasswordController
+    changePasswordController
 } from "../Controllers/settingsController.js";
 
 import { authenticate } from "../middlewares/auth.middleware.js";
@@ -17,6 +17,6 @@ router.get("/general", authenticate,fetchGeneralSettings);
 router.put("/general",authenticate, editGeneralSettings);
 router.get("/profile",authenticate,fetchAdminProfile);
 router.put("/profile",authenticate,editAdminProfile);
-router.put("/profile/password",authenticate,changeAdminPasswordController);
+router.put("/profile/password",authenticate,changePasswordController);
 
 export default router;
