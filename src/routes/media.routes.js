@@ -7,7 +7,7 @@ import {
     removeMedia
 } from "../controllers/media.controller.js";
 
-import upload from "../middlewares/upload.middleware.js";
+import upload from "../middlewares/upload.middlewares.js";
 
 const router = express.Router();
 

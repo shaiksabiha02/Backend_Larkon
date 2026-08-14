@@ -8,10 +8,10 @@ import pool from "../config/db.js";
 export const getDashboardSummary = async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT
-                (SELECT COUNT(*) FROM orders) AS total_orders,
-                (SELECT COUNT(*) FROM users) AS total_users,
-                (SELECT COALESCE(SUM(total_amount), 0)
+            SELECT 
+                (SELECT COUNT(*) FROM orders) AS total_orders, 
+                (SELECT COUNT(*) FROM users) AS total_users, 
+                (SELECT COALESCE(SUM(total_amount), 0) 
                  FROM orders) AS total_revenue
         `);
 
@@ -38,16 +38,16 @@ export const getDashboardSummary = async (req, res) => {
 export const getRecentOrders = async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT
-                o.id AS order_id,
-                o.created_at,
-                o.user_id,
-                u.full_name,
-                o.total_amount,
-                o.priority,
+            SELECT 
+                o.id AS order_id, 
+                o.created_at, 
+                o.user_id, 
+                u.full_name, 
+                o.total_amount, 
+                o.priority, 
                 o.payment_status
             FROM orders o
-            JOIN users u
+            JOIN users u 
                 ON o.user_id = u.id
             ORDER BY o.created_at DESC
             LIMIT 10
@@ -76,9 +76,9 @@ export const getRecentOrders = async (req, res) => {
 export const getSalesOverview = async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT
-                DATE(created_at) AS date,
-                COUNT(*) AS total_orders,
+            SELECT 
+                DATE(created_at) AS date, 
+                COUNT(*) AS total_orders, 
                 COALESCE(SUM(total_amount), 0) AS total_revenue
             FROM orders
             GROUP BY DATE(created_at)
@@ -108,13 +108,13 @@ export const getSalesOverview = async (req, res) => {
 export const getTopProducts = async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT
-                p.id AS product_id,
-                p.product_name,
-                SUM(oi.quantity) AS total_quantity,
+            SELECT 
+                p.id AS product_id, 
+                p.product_name, 
+                SUM(oi.quantity) AS total_quantity, 
                 SUM(oi.quantity * oi.price) AS total_sales
             FROM order_items oi
-            JOIN products p
+            JOIN products p 
                 ON oi.product_id = p.id
             GROUP BY p.id, p.product_name
             ORDER BY total_sales DESC
@@ -135,6 +135,8 @@ export const getTopProducts = async (req, res) => {
         });
     }
 };
+
+
 // ========================================
 // 5. Revenue By Category
 // ========================================
@@ -142,15 +144,15 @@ export const getTopProducts = async (req, res) => {
 export const getRevenueByCategory = async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT
-                c.id AS category_id,
-                c.category_name,
-                SUM(oi.quantity) AS total_quantity,
+            SELECT 
+                c.id AS category_id, 
+                c.category_name, 
+                SUM(oi.quantity) AS total_quantity, 
                 SUM(oi.quantity * oi.price) AS total_sales
             FROM order_items oi
-            JOIN products p
+            JOIN products p 
                 ON oi.product_id = p.id
-            JOIN categories c
+            JOIN categories c 
                 ON p.category_id = c.id
             GROUP BY c.id, c.category_name
             ORDER BY total_sales DESC
@@ -170,41 +172,8 @@ export const getRevenueByCategory = async (req, res) => {
         });
     }
 };
-// ========================================
-// 5. Category-wise Sales
-// ========================================
 
-export const getCategorySales = async (req, res) => {
-    try {
-        const result = await pool.query(`
-            SELECT
-                c.id AS category_id,
-                c.category_name,
-                SUM(oi.quantity) AS total_quantity,
-                SUM(oi.quantity * oi.price) AS total_sales
-            FROM order_items oi
-            JOIN products p
-                ON oi.product_id = p.id
-            JOIN categories c
-                ON p.category_id = c.id
-            GROUP BY c.id, c.category_name
-            ORDER BY total_sales DESC
-        `);
 
-        res.status(200).json({
-            success: true,
-            data: result.rows
-        });
-
-    } catch (error) {
-        console.error("❌ Category Sales Database Error:", error.message);
-
-        res.status(500).json({
-            success: false,
-            message: "Failed to fetch category sales"
-        });
-    }
-};
 // ========================================
 // 6. Customer Growth
 // ========================================
@@ -212,21 +181,21 @@ export const getCategorySales = async (req, res) => {
 export const getCustomerGrowth = async (req, res) => {
     try {
         const result = await pool.query(`
-            SELECT
-                DATE(o.created_at) AS date,
-                COUNT(DISTINCT o.user_id) AS total_customers,
-                COUNT(DISTINCT CASE
-                    WHEN first_order.first_order_date = DATE(o.created_at)
-                    THEN o.user_id
-                END) AS new_customers,
-                COUNT(DISTINCT CASE
-                    WHEN first_order.first_order_date < DATE(o.created_at)
-                    THEN o.user_id
+            SELECT 
+                DATE(o.created_at) AS date, 
+                COUNT(DISTINCT o.user_id) AS total_customers, 
+                COUNT(DISTINCT CASE 
+                    WHEN first_order.first_order_date = DATE(o.created_at) 
+                    THEN o.user_id 
+                END) AS new_customers, 
+                COUNT(DISTINCT CASE 
+                    WHEN first_order.first_order_date < DATE(o.created_at) 
+                    THEN o.user_id 
                 END) AS returning_customers
             FROM orders o
             JOIN (
-                SELECT
-                    user_id,
+                SELECT 
+                    user_id, 
                     MIN(DATE(created_at)) AS first_order_date
                 FROM orders
                 GROUP BY user_id

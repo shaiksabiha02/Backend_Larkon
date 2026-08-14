@@ -1,4 +1,4 @@
-const pool = require("../config/db");
+import pool from "../config/db.js";
 
 async function createCategoriesTable() {
     try {
@@ -21,7 +21,8 @@ async function createCategoriesTable() {
     }
 }
 
-const pool = require("../config/db");
+createCategoriesTable();
+import pool from "../config/db.js";
 
 async function createProductsTable() {
     try {
@@ -81,103 +82,169 @@ async function createProductsTable() {
 }
 
 createProductsTable();
-
 import Pool from "../config/db.js";
+
 async function createOrdersTable() {
     await Pool.query(`
-           
-        
-  CREATE TYPE order_status AS ENUM ('received', 'processing', 'shipped', 'delivered', 'cancelled');
-            CREATE TYPE order_priority AS ENUM ('low','normal' ,'medium', 'high');
-            CREATE TYPE ORDER_PAYMENT_STATUS AS ENUM ('pending', 'completed', 'failed','refunded');
-        
+            
+        CREATE TYPE order_status AS ENUM (
+            'received',
+            'processing',
+            'shipped',
+            'delivered',
+            'cancelled'
+        );
 
-            CREATE TABLE IF NOT EXISTS orders (
-                id SERIAL PRIMARY KEY,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                user_id INT NOT NULL,
-                priority order_priority DEFAULT 'normal',
-                total_amount NUMERIC(10, 2) NOT NULL,
-                payment_status ORDER_PAYMENT_STATUS DEFAULT 'pending',
-                items NUMERIC(10, 0) NOT NULL,
-                Delivery_number varchar(20) NULL, 
-                status order_status DEFAULT 'received',
-                SHIPPING_ADDRESS TEXT,
-                CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    
-    );
+        CREATE TYPE order_priority AS ENUM (
+            'low',
+            'normal',
+            'medium',
+            'high'
+        );
 
+        CREATE TYPE ORDER_PAYMENT_STATUS AS ENUM (
+            'pending',
+            'completed',
+            'failed',
+            'refunded'
+        );
+
+        CREATE TABLE IF NOT EXISTS orders (
+            id SERIAL PRIMARY KEY,
+
+            created_at TIMESTAMP WITH TIME ZONE
+                DEFAULT CURRENT_TIMESTAMP,
+
+            user_id INT NOT NULL,
+
+            priority order_priority
+                DEFAULT 'normal',
+
+            total_amount NUMERIC(10, 2) NOT NULL,
+
+            payment_status ORDER_PAYMENT_STATUS
+                DEFAULT 'pending',
+
+            items NUMERIC(10, 0) NOT NULL,
+
+            Delivery_number VARCHAR(20) NULL,
+
+            status order_status
+                DEFAULT 'received',
+
+            SHIPPING_ADDRESS TEXT,
+
+            CONSTRAINT fk_orders_user
+            FOREIGN KEY (user_id)
+            REFERENCES users(id)
+            ON DELETE CASCADE
+        );
             
     `);
-    console.log("Orders table CREATED successfully.");
-    process.exit();
-};
- createOrdersTable();
 
- import Pool from "../config/db.js";
+    console.log("Orders table CREATED successfully.");
+
+    process.exit();
+}
+
+createOrdersTable();
+import Pool from "../config/db.js";
+
 async function createOrderItemsTable() {
     await Pool.query(`
 
-    CREATE TABLE IF NOT EXISTS order_items (
-    id SERIAL PRIMARY KEY,
-    order_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL,
-    price NUMERIC(10, 2) NOT NULL,
-    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    CONSTRAINT fk_order_items_products FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
-);
+        CREATE TABLE IF NOT EXISTS order_items (
+            id SERIAL PRIMARY KEY,
+
+            order_id INT NOT NULL,
+
+            product_id INT NOT NULL,
+
+            quantity INT NOT NULL,
+
+            price NUMERIC(10, 2) NOT NULL,
+
+            CONSTRAINT fk_order_items_order
+            FOREIGN KEY (order_id)
+            REFERENCES orders(id)
+            ON DELETE CASCADE,
+
+            CONSTRAINT fk_order_items_products
+            FOREIGN KEY (product_id)
+            REFERENCES products(id)
+            ON DELETE CASCADE
+        );
+
     `);
+
     console.log("Order_items table created successfully.");
+
     process.exit();
 }
- createOrderItemsTable();
 
- import pool from "../config/db.js";
+createOrderItemsTable();
+import pool from "../config/db.js";
 
 const createUserTable = async () => {
-  try {
-    await pool.query(`
-      DROP TABLE IF EXISTS users CASCADE;
 
-      CREATE TABLE users (
-        id SERIAL PRIMARY KEY,
+    try {
 
-        first_name VARCHAR(100) NOT NULL,
-        last_name VARCHAR(100),
-        full_name VARCHAR(200) NOT NULL,
+        await pool.query(`
+            DROP TABLE IF EXISTS users CASCADE;
 
-        username VARCHAR(100) UNIQUE NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        phone VARCHAR(20),
+            CREATE TABLE users (
+                id SERIAL PRIMARY KEY,
 
-        password VARCHAR(255) NOT NULL,
+                first_name VARCHAR(100) NOT NULL,
 
-        designation VARCHAR(100),
-        profile_image TEXT,
+                last_name VARCHAR(100),
 
-        role_id INT,
-        status VARCHAR(20) DEFAULT 'Active',
+                full_name VARCHAR(200) NOT NULL,
 
-        last_login TIMESTAMP,
-        email_verified BOOLEAN DEFAULT FALSE,
+                username VARCHAR(100) UNIQUE NOT NULL,
 
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                email VARCHAR(255) UNIQUE NOT NULL,
 
-        CONSTRAINT fk_user_role
-        FOREIGN KEY (role_id)
-        REFERENCES roles(id)
-        ON DELETE SET NULL
-      );
-    `);
+                phone VARCHAR(20),
 
-    console.log("Users table created successfully.");
-  } catch (error) {
-    console.error("Error creating users table:", error.message);
-  } finally {
-    process.exit();
-  }
+                password VARCHAR(255) NOT NULL,
+
+                designation VARCHAR(100),
+
+                profile_image TEXT,
+
+                role_id INT,
+
+                status VARCHAR(20) DEFAULT 'Active',
+
+                last_login TIMESTAMP,
+
+                email_verified BOOLEAN DEFAULT FALSE,
+
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                CONSTRAINT fk_user_role
+                FOREIGN KEY (role_id)
+                REFERENCES roles(id)
+                ON DELETE SET NULL
+            );
+        `);
+
+        console.log("Users table created successfully.");
+
+    } catch (error) {
+
+        console.error(
+            "Error creating users table:",
+            error.message
+        );
+
+    } finally {
+
+        process.exit();
+    }
 };
 
 createUserTable();
