@@ -49,6 +49,14 @@ const doc = {
         {
             name: "Authentication",
             description: "Authentication APIs"
+        },
+        {
+            name: "Invoices & Billing",
+            description: "Invoices APIs"
+        },
+        {
+            name: "Settings & Static Pages",
+            description: "Authentication APIs"
         }
     ]
 };
