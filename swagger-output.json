@@ -44,15 +44,104 @@
   "schemes": [
     "http"
   ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
   "paths": {
     "/api/v1/products/": {
       "post": {
+        "tags": [
+          "Products"
+        ],
         "description": "",
         "parameters": [
           {
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Create a new product",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "product_name": {
+                  "type": "string",
+                  "example": "Test T-Shirt"
+                },
+                "category_id": {
+                  "type": "number",
+                  "example": 1
+                },
+                "seller_id": {
+                  "type": "number",
+                  "example": 1
+                },
+                "brand": {
+                  "type": "string",
+                  "example": "Nike"
+                },
+                "weight": {
+                  "type": "string",
+                  "example": "500g"
+                },
+                "gender": {
+                  "type": "string",
+                  "example": "Unisex"
+                },
+                "size": {
+                  "type": "string",
+                  "example": "L"
+                },
+                "color": {
+                  "type": "string",
+                  "example": "Black"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Comfortable cotton T-Shirt"
+                },
+                "tag_number": {
+                  "type": "string",
+                  "example": "TSHIRT001"
+                },
+                "stock": {
+                  "type": "number",
+                  "example": 50
+                },
+                "tag": {
+                  "type": "string",
+                  "example": "Fashion"
+                },
+                "price": {
+                  "type": "number",
+                  "example": 999
+                },
+                "tax": {
+                  "type": "number",
+                  "example": 18
+                },
+                "image": {
+                  "type": "array",
+                  "example": [],
+                  "items": {}
+                },
+                "status": {
+                  "type": "string",
+                  "example": "active"
+                },
+                "discount": {
+                  "type": "number",
+                  "example": 10
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -62,6 +151,9 @@
         }
       },
       "get": {
+        "tags": [
+          "Products"
+        ],
         "description": "",
         "responses": {
           "default": {
@@ -72,7 +164,18 @@
     },
     "/api/v1/products/{id}": {
       "get": {
+        "tags": [
+          "Products"
+        ],
         "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
         "responses": {
           "default": {
             "description": ""
@@ -80,6 +183,9 @@
         }
       },
       "put": {
+        "tags": [
+          "Products"
+        ],
         "description": "",
         "parameters": [
           {
@@ -92,6 +198,82 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Update product",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "product_name": {
+                  "type": "string",
+                  "example": "Updated T-Shirt"
+                },
+                "category_id": {
+                  "type": "number",
+                  "example": 1
+                },
+                "seller_id": {
+                  "type": "number",
+                  "example": 1
+                },
+                "brand": {
+                  "type": "string",
+                  "example": "Nike"
+                },
+                "weight": {
+                  "type": "string",
+                  "example": "500g"
+                },
+                "gender": {
+                  "type": "string",
+                  "example": "Unisex"
+                },
+                "size": {
+                  "type": "string",
+                  "example": "L"
+                },
+                "color": {
+                  "type": "string",
+                  "example": "Black"
+                },
+                "description": {
+                  "type": "string",
+                  "example": "Updated product description"
+                },
+                "tag_number": {
+                  "type": "string",
+                  "example": "TSHIRT001"
+                },
+                "stock": {
+                  "type": "number",
+                  "example": 40
+                },
+                "tag": {
+                  "type": "string",
+                  "example": "Fashion"
+                },
+                "price": {
+                  "type": "number",
+                  "example": 899
+                },
+                "tax": {
+                  "type": "number",
+                  "example": 18
+                },
+                "image": {
+                  "type": "array",
+                  "example": [],
+                  "items": {}
+                },
+                "status": {
+                  "type": "string",
+                  "example": "active"
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -101,6 +283,9 @@
         }
       },
       "delete": {
+        "tags": [
+          "Products"
+        ],
         "description": "",
         "parameters": [
           {
@@ -124,6 +309,9 @@
     },
     "/api/v1/products/{id}/images": {
       "post": {
+        "tags": [
+          "Products"
+        ],
         "description": "",
         "parameters": [
           {
@@ -147,6 +335,9 @@
     },
     "/api/v1/products/{id}/status": {
       "patch": {
+        "tags": [
+          "Products"
+        ],
         "description": "",
         "parameters": [
           {
@@ -159,6 +350,21 @@
             "name": "authorization",
             "in": "header",
             "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "description": "Update product status",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "example": "active"
+                }
+              }
+            }
           }
         ],
         "responses": {
@@ -170,6 +376,9 @@
     },
     "/api/v1/products/import": {
       "post": {
+        "tags": [
+          "Products"
+        ],
         "description": "",
         "parameters": [
           {
