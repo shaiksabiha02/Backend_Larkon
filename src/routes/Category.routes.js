@@ -1,4 +1,5 @@
 import express from "express";
+import { authenticate } from "../middlewares/auth.middleware.js";
 
 import {
     createCategory,
@@ -7,21 +8,71 @@ import {
     updateCategory,
     deleteCategory
 } from "../controllers/Category.controller.js";
-import { authenticate } from "../middlewares/auth.middleware.js";
+
 const router = express.Router();
 
-// Create Category
-router.post("/",authenticate, createCategory);
+router.post(
+    "/",
+    authenticate,
+    /* #swagger.tags = ['Categories'] */
 
-// Get All Categories
-router.get("/", getAllCategories);
+    /* #swagger.parameters['body'] = {
+        in: 'body',
+        description: 'Create a new category',
+        required: true,
+        schema: {
+            category_name: 'Fashion',
+            description: 'Fashion products collection',
+            status: 'active'
+        }
+    } */
 
+    createCategory
+);
 
+router.get(
+    "/",
 
-// Update Category
-router.put("/:id", authenticate,updateCategory);
+    /* #swagger.tags = ['Categories'] */
 
-// Delete Category
-router.delete("/:id", authenticate,deleteCategory);
+    getAllCategories
+);
+
+router.get(
+    "/:id",
+
+    /* #swagger.tags = ['Categories'] */
+
+    getCategoryById
+);
+
+router.put(
+    "/:id",
+    authenticate,
+
+    /* #swagger.tags = ['Categories'] */
+
+    /* #swagger.parameters['body'] = {
+        in: 'body',
+        description: 'Update category',
+        required: true,
+        schema: {
+            category_name: 'Updated Fashion',
+            description: 'Updated category description',
+            status: 'active'
+        }
+    } */
+
+    updateCategory
+);
+
+router.delete(
+    "/:id",
+    authenticate,
+
+    /* #swagger.tags = ['Categories'] */
+
+    deleteCategory
+);
 
 export default router;

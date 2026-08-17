@@ -59,11 +59,31 @@ export const addToCart = async (req, res) => {
 
 // Remove Cart Item
 export const removeCartItem = async (req, res) => {
-    try {
-        const { itemId } = req.params;
-        await Pool.query('DELETE FROM cart_items WHERE id = $1', [itemId]);
-        res.status(200).json({ success: true, message: 'Item removed from cart successfully' });
-    } catch (error) {
+  try {
+    const { userId, itemId } = req.params;
+
+    const result = await Pool.query(
+      `DELETE FROM cart_items 
+       WHERE items_id = $1 
+       AND cart_id IN (SELECT id FROM cart WHERE user_id = $2)
+       RETURNING *`,
+      [itemId, userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found in user cart'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Item removed from cart successfully',
+      deletedItem: result.rows[0]
+    });
+}
+     catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -77,7 +97,7 @@ export const checkoutCart = async (req, res) => {
         await client.query('BEGIN');
 
         // Get user cart
-        const cartResult = await client.query('SELECT * FROM cart WHERE user_id = $1', [userId]);
+        const cartResult = await client.query(`SELECT * FROM cart WHERE user_id = $1`, [userId]);
         if (cartResult.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(400).json({ success: false, message: 'Cart is empty' });

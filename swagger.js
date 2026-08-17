@@ -28,6 +28,9 @@ const doc = {
 
         
         },
+    consumes: ["application/json"],
+
+    produces: ["application/json"],
 
     tags: [
         {
@@ -61,7 +64,8 @@ const doc = {
         {
             name: "Authentication",
             description: "Authentication APIs"
-        }
+        },
+        
     ]
 };
 
