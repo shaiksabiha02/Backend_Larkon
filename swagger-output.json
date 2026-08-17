@@ -39,14 +39,6 @@
     {
       "name": "Authentication",
       "description": "Authentication APIs"
-    },
-    {
-      "name": "Invoices & Billing",
-      "description": "Invoices APIs"
-    },
-    {
-      "name": "Settings & Static Pages",
-      "description": "Authentication APIs"
     }
   ],
   "schemes": [
@@ -2892,10 +2884,34 @@
                 "last_name": {
                   "example": "any"
                 },
+                "full_name": {
+                  "example": "any"
+                },
+                "username": {
+                  "example": "any"
+                },
                 "email": {
                   "example": "any"
                 },
+                "phone": {
+                  "example": "any"
+                },
                 "password": {
+                  "example": "any"
+                },
+                "designation": {
+                  "example": "any"
+                },
+                "profile_image": {
+                  "example": "any"
+                },
+                "role_id": {
+                  "example": "any"
+                },
+                "status": {
+                  "example": "any"
+                },
+                "role": {
                   "example": "any"
                 }
               }
@@ -2970,9 +2986,6 @@
           },
           "401": {
             "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal Server Error"
           }
         }
       }
@@ -3920,63 +3933,6 @@
             "description": "Internal Server Error"
           }
         }
-      },
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "type": "object",
-              "properties": {
-                "sender_id": {
-                  "example": "any"
-                },
-                "receiver_email": {
-                  "example": "any"
-                },
-                "subject": {
-                  "example": "any"
-                },
-                "body": {
-                  "example": "any"
-                },
-                "is_read": {
-                  "example": "any"
-                },
-                "is_starred": {
-                  "example": "any"
-                },
-                "folder": {
-                  "example": "any"
-                },
-                "attachment": {
-                  "example": "any"
-                }
-              }
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "400": {
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
       }
     },
     "/api/v1/emails/{id}": {
@@ -4103,6 +4059,65 @@
           },
           "404": {
             "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/v1/emails/send": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sender_id": {
+                  "example": "any"
+                },
+                "receiver_email": {
+                  "example": "any"
+                },
+                "subject": {
+                  "example": "any"
+                },
+                "body": {
+                  "example": "any"
+                },
+                "is_read": {
+                  "example": "any"
+                },
+                "is_starred": {
+                  "example": "any"
+                },
+                "folder": {
+                  "example": "any"
+                },
+                "attachment": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
           },
           "500": {
             "description": "Internal Server Error"
