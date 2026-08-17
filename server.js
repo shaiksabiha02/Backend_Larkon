@@ -11,6 +11,7 @@ import loginHistoryRoutes from "./src/routes/LoginHistory.routes.js";
 import userProfileRoutes from "./src/routes/UserProfile.routes.js";
 import authRoutes from "./src/routes/Auth.routes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
+import rolePermissionRoutes from "./src/routes/RolePermission.routes.js";
 
 dotenv.config();
 
@@ -47,6 +48,9 @@ app.use("/api/v1/auth", authRoutes);
 
 // Admin Routes
 app.use("/api/v1/admin", adminRoutes);
+
+// Role Permission Routes
+app.use("/api/v1/role-permissions", rolePermissionRoutes);
 
 const PORT = process.env.PORT || 3000;
 
