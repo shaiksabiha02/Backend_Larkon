@@ -2,15 +2,29 @@ import express from "express";
 import pool from "../config/db.js";
 
 const router = express.Router();
-
+// =====================================================
 // GET ALL INBOX EMAILS
 // GET /api/inbox
+// =====================================================
 router.get("/", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT *
-      FROM inbox
-      ORDER BY id DESC
+      SELECT 
+        i.id AS inbox_id,
+        i.user_id,
+        e.id AS email_id,
+        e.sender_id,
+        e.receiver_email,
+        e.subject,
+        e.body,
+        e.is_read,
+        e.is_starred,
+        e.folder,
+        e.attachment,
+        e.sent_at
+      FROM inbox i
+      INNER JOIN emails e ON e.id = i.email_id
+      ORDER BY e.id DESC
     `);
 
     res.status(200).json({
