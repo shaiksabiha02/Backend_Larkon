@@ -11,16 +11,12 @@ import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-// Register
 router.post("/register", register);
 
-// Login
 router.post("/login", login);
 
-// Logout
 router.post("/logout", authenticate, logout);
 
-// Get logged-in user
 router.get("/me", authenticate, getMe);
 
 export default router;
