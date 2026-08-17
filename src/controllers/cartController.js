@@ -60,10 +60,8 @@ export const addToCart = async (req, res) => {
 // Remove Cart Item
 export const removeCartItem = async (req, res) => {
   try {
-    // 1. URL నుండి userId మరియు itemId రెండింటినీ destructure చేయండి
     const { userId, itemId } = req.params;
 
-    // 2. items_id మరియు యూజర్ cart_id రెండింటి ఆధారంగా డిలీట్ చేయండి
     const result = await Pool.query(
       `DELETE FROM cart_items 
        WHERE items_id = $1 
@@ -72,7 +70,6 @@ export const removeCartItem = async (req, res) => {
       [itemId, userId]
     );
 
-    // 3. ఒకవేళ ఆ ఐటమ్ కార్ట్ లో లేకపోతే 404 పంపడం
     if (result.rowCount === 0) {
       return res.status(404).json({
         success: false,
