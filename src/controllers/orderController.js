@@ -110,7 +110,7 @@ export const getInvoice = async (req, res) => {
                 o.payment_status,
                 o.shipping_address,
                 o.created_at AS order_date,
-                u.name AS customer_name,
+                u.full_name AS customer_name,
                 u.email AS customer_email,
                 u.phone AS customer_phone
             FROM orders o
