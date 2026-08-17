@@ -1,4 +1,5 @@
 import Pool from '../config/db.js';
+import {calculateCouponDiscount} from '../utils/CouponCalculator.js'
 
 // Get Cart Items
 export const getCart = async (req, res) => {
@@ -58,11 +59,34 @@ export const addToCart = async (req, res) => {
 
 // Remove Cart Item
 export const removeCartItem = async (req, res) => {
-    try {
-        const { itemId } = req.params;
-        await Pool.query('DELETE FROM cart_items WHERE id = $1', [itemId]);
-        res.status(200).json({ success: true, message: 'Item removed from cart successfully' });
-    } catch (error) {
+  try {
+    // 1. URL నుండి userId మరియు itemId రెండింటినీ destructure చేయండి
+    const { userId, itemId } = req.params;
+
+    // 2. items_id మరియు యూజర్ cart_id రెండింటి ఆధారంగా డిలీట్ చేయండి
+    const result = await Pool.query(
+      `DELETE FROM cart_items 
+       WHERE items_id = $1 
+       AND cart_id IN (SELECT id FROM cart WHERE user_id = $2)
+       RETURNING *`,
+      [itemId, userId]
+    );
+
+    // 3. ఒకవేళ ఆ ఐటమ్ కార్ట్ లో లేకపోతే 404 పంపడం
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Item not found in user cart'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Item removed from cart successfully',
+      deletedItem: result.rows[0]
+    });
+}
+     catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -71,12 +95,12 @@ export const removeCartItem = async (req, res) => {
 export const checkoutCart = async (req, res) => {
     const client = await Pool.connect();
     try {
-        const { userId,shipping_address } = req.body;
+        const { userId,shipping_address,couponCode} = req.body;
         
         await client.query('BEGIN');
 
         // Get user cart
-        const cartResult = await client.query('SELECT * FROM cart WHERE user_id = $1', [userId]);
+        const cartResult = await client.query(`SELECT * FROM cart WHERE user_id = $1`, [userId]);
         if (cartResult.rows.length === 0) {
             await client.query('ROLLBACK');
             return res.status(400).json({ success: false, message: 'Cart is empty' });
@@ -103,6 +127,19 @@ export const checkoutCart = async (req, res) => {
             totalAmount += Number(item.price) * item.quantity;
             totalItemsCount += item.quantity;
         });
+        let finalTotal = totalAmount;
+        let discountAmount =0;
+
+        if(couponCode){
+            const couponRes = await client.query(`SELECT * FROM coupons WHERE UPPER(coupon_code) = UPPER($1) AND status =$2`,[couponCode,'Active']);
+
+            if (couponRes.rows.length>0){
+                const coupon = couponRes.rows[0];
+                const calculation = calculateCouponDiscount(coupon, totalAmount);
+                finalTotal = calculation.finalTotal;
+                discountAmount = calculation.discountAmount;
+            }
+        }
 
         // Insert into orders table matching new columns
         const orderQuery = `
@@ -110,7 +147,7 @@ export const checkoutCart = async (req, res) => {
             VALUES ($1, $2, $3, 'received', 'normal', 'pending',$4) 
             RETURNING *;
         `;
-        const orderResult = await client.query(orderQuery, [userId, totalAmount, totalItemsCount,shipping_address]);
+        const orderResult = await client.query(orderQuery, [userId, finalTotal, totalItemsCount,shipping_address]);
         const orderId = orderResult.rows[0].id;
 
         // Insert into order_items
@@ -125,7 +162,7 @@ export const checkoutCart = async (req, res) => {
         await client.query('DELETE FROM cart_items WHERE cart_id = $1', [cartId]);
 
         await client.query('COMMIT');
-        res.status(201).json({ success: true, message: 'Order created successfully', order: orderResult.rows[0] });
+        res.status(201).json({ success: true, message: 'Order created successfully', order: orderResult.rows[0],checkoutSummary: { cartTotal: totalAmount, discountAmount: discountAmount, finalTotal: finalTotal } });
     } catch (error) {
         await client.query('ROLLBACK');
         res.status(500).json({ success: false, message: error.message });

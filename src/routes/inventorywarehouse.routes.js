@@ -9,9 +9,9 @@ import {
 
 const router = express.Router();
 
-router.get("/inventory-warehouses", getInventoryWarehouses);
+router.get("/warehouses", getInventoryWarehouses);
 
-router.get("/inventory-warehouses/:id", getInventoryWarehouse);
+router.get("/warehouses/:id", getInventoryWarehouse);
 
 router.post("/warehouses", createWarehouse);
 

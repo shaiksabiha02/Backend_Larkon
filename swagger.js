@@ -53,7 +53,8 @@ const doc = {
         {
             name: "Authentication",
             description: "Authentication APIs"
-        }
+        },
+        
     ]
 };
 

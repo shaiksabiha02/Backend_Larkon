@@ -1,8 +1,7 @@
 import pool from "../config/db.js";
 
-//1. Getting invoices
+// 1. Get all invoices
 export async function getInvoices() {
-
     const summaryResult = await pool.query(`
         SELECT
             COUNT(*) AS total_invoice,
@@ -36,10 +35,8 @@ export async function getInvoices() {
             o.status AS order_status
 
         FROM invoices i
-
         JOIN orders o
             ON i.orders_id = o.id
-
         JOIN users u
             ON o.user_id = u.id
 
@@ -53,15 +50,13 @@ export async function getInvoices() {
             paidInvoice: Number(summaryResult.rows[0].paid_invoice),
             inactiveInvoice: Number(summaryResult.rows[0].inactive_invoice)
         },
-
         invoices: invoicesResult.rows
     };
 }
 
-// 2. Getting invoice details by id
-export async function getInvoiceById(id) {
 
-    // Get invoice, order and customer information
+// 2. Get invoice details
+export async function getInvoiceById(id) {
     const invoiceResult = await pool.query(
         `
         SELECT
@@ -70,7 +65,7 @@ export async function getInvoiceById(id) {
             i.orders_id AS order_id,
 
             o.created_at AS order_date,
-            o.total_amount AS order_total,
+            o.total_amount,
             o.payment_status,
             o.status AS order_status,
             o.shipping_address,
@@ -82,10 +77,8 @@ export async function getInvoiceById(id) {
             u.phone
 
         FROM invoices i
-
         JOIN orders o
             ON i.orders_id = o.id
-
         JOIN users u
             ON o.user_id = u.id
 
@@ -100,33 +93,20 @@ export async function getInvoiceById(id) {
 
     const invoice = invoiceResult.rows[0];
 
-    // Get products belonging to the order
     const itemsResult = await pool.query(
         `
         SELECT
-            oi.id,
+            oi.id AS order_item_id,
             oi.product_id,
             p.product_name,
             p.size,
             oi.quantity,
             oi.price,
-
-            COALESCE(d.discount, 0) AS discount,
-            p.tax,
-
-            (
-                oi.price * oi.quantity
-                - COALESCE(d.discount, 0) * oi.quantity
-                + p.tax * oi.quantity
-            ) AS total
+            COALESCE(oi.tax, 0) AS tax
 
         FROM order_items oi
-
         JOIN products p
             ON oi.product_id = p.id
-
-        LEFT JOIN discounts d
-            ON oi.product_id = d.product_id
 
         WHERE oi.order_id = $1
 
@@ -135,39 +115,39 @@ export async function getInvoiceById(id) {
         [invoice.order_id]
     );
 
-    // Calculate subtotal, discount and tax
-    const summaryResult = await pool.query(
-        `
-        SELECT
-            COALESCE(
-                SUM(oi.price * oi.quantity),
-                0
-            ) AS subtotal,
+    let subtotal = 0;
+    let tax = 0;
 
-            COALESCE(
-                SUM(COALESCE(d.discount, 0) * oi.quantity),
-                0
-            ) AS discount,
+    const items = itemsResult.rows.map(item => {
+        const price = Number(item.price) || 0;
+        const quantity = Number(item.quantity) || 0;
+        const itemTax = Number(item.tax) || 0;
 
-            COALESCE(
-                SUM(p.tax * oi.quantity),
-                0
-            ) AS tax
+        const itemSubtotal = price * quantity;
+        const totalTax = itemTax * quantity;
+        const itemTotal = itemSubtotal + totalTax;
 
-        FROM order_items oi
+        subtotal += itemSubtotal;
+        tax += totalTax;
 
-        JOIN products p
-            ON oi.product_id = p.id
+        return {
+            id: item.order_item_id,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            size: item.size,
+            quantity,
+            price: price.toFixed(2),
+            tax: itemTax.toFixed(2),
+            total: itemTotal.toFixed(2)
+        };
+    });
 
-        LEFT JOIN discounts d
-            ON oi.product_id = d.product_id
+    const grandTotal = Number(invoice.total_amount) || 0;
 
-        WHERE oi.order_id = $1
-        `,
-        [invoice.order_id]
+    const discount = Math.max(
+        0,
+        subtotal + tax - grandTotal
     );
-
-    const summary = summaryResult.rows[0];
 
     return {
         invoice: {
@@ -182,37 +162,35 @@ export async function getInvoiceById(id) {
 
         billing: {
             user_id: invoice.user_id,
-            name: `${invoice.first_name} ${invoice.last_name}`,
+            name: `${invoice.first_name || ""} ${invoice.last_name || ""}`.trim(),
             email: invoice.email,
             phone: invoice.phone
         },
 
-        items: itemsResult.rows,
+        items,
 
         summary: {
-            subtotal: summary.subtotal,
-            discount: summary.discount,
-            tax: summary.tax,
-            grand_total: invoice.order_total
+            subtotal: subtotal.toFixed(2),
+            discount: discount.toFixed(2),
+            tax: tax.toFixed(2),
+            grand_total: grandTotal.toFixed(2)
         }
     };
 }
 
-//3. Send invoice email
-export async function sendInvoiceEmail(id) {
 
-    // Get invoice and customer email
+// 3. Send invoice email
+export async function sendInvoiceEmail(id) {
     const invoiceResult = await pool.query(
         `
         SELECT
             i.id,
             i.invoice_number,
             u.email
-        FROM invoices i
 
+        FROM invoices i
         JOIN orders o
             ON i.orders_id = o.id
-
         JOIN users u
             ON o.user_id = u.id
 
@@ -221,19 +199,16 @@ export async function sendInvoiceEmail(id) {
         [id]
     );
 
-    // Invoice not found
     if (invoiceResult.rows.length === 0) {
         return null;
     }
 
     const invoice = invoiceResult.rows[0];
 
-    // Simulate sending the email
     console.log(
         `Mock email sent to ${invoice.email} for invoice ${invoice.invoice_number}`
     );
 
-    // Store email attempt in invoice_email_logs
     const logResult = await pool.query(
         `
         INSERT INTO invoice_email_logs
@@ -267,11 +242,8 @@ export async function sendInvoiceEmail(id) {
 }
 
 
-
 // 4. Generate invoice PDF data
 export async function generateInvoicePDF(id) {
-
-    // Get invoice, order and customer information
     const invoiceResult = await pool.query(
         `
         SELECT
@@ -280,20 +252,20 @@ export async function generateInvoicePDF(id) {
             i.orders_id AS order_id,
 
             o.created_at AS order_date,
+            o.total_amount,
             o.payment_status,
             o.status AS order_status,
             o.shipping_address,
 
+            u.id AS user_id,
             u.first_name,
             u.last_name,
             u.email,
             u.phone
 
         FROM invoices i
-
         JOIN orders o
             ON i.orders_id = o.id
-
         JOIN users u
             ON o.user_id = u.id
 
@@ -302,39 +274,26 @@ export async function generateInvoicePDF(id) {
         [id]
     );
 
-    // Invoice not found
     if (invoiceResult.rows.length === 0) {
         return null;
     }
 
     const invoice = invoiceResult.rows[0];
 
-    // Get products/items from the order
     const itemsResult = await pool.query(
         `
         SELECT
+            oi.id AS order_item_id,
             oi.product_id,
             p.product_name,
             p.size,
             oi.quantity,
             oi.price,
-
-            COALESCE(d.discount, 0) AS discount,
-            p.tax,
-
-            (
-                oi.price * oi.quantity
-                - COALESCE(d.discount, 0) * oi.quantity
-                + p.tax * oi.quantity
-            ) AS total
+            COALESCE(oi.tax, 0) AS tax
 
         FROM order_items oi
-
         JOIN products p
             ON oi.product_id = p.id
-
-        LEFT JOIN discounts d
-            ON oi.product_id = d.product_id
 
         WHERE oi.order_id = $1
 
@@ -343,34 +302,67 @@ export async function generateInvoicePDF(id) {
         [invoice.order_id]
     );
 
-    // Calculate invoice summary
     let subtotal = 0;
-    let discount = 0;
     let tax = 0;
 
-    for (const item of itemsResult.rows) {
+    const items = itemsResult.rows.map(item => {
+        const price = Number(item.price) || 0;
+        const quantity = Number(item.quantity) || 0;
+        const itemTax = Number(item.tax) || 0;
 
-        const price = Number(item.price);
-        const quantity = Number(item.quantity);
-        const itemDiscount = Number(item.discount);
-        const itemTax = Number(item.tax);
+        const itemSubtotal = price * quantity;
+        const totalTax = itemTax * quantity;
+        const itemTotal = itemSubtotal + totalTax;
 
-        subtotal += price * quantity;
-        discount += itemDiscount * quantity;
-        tax += itemTax * quantity;
-    }
+        subtotal += itemSubtotal;
+        tax += totalTax;
 
-    const total = subtotal - discount + tax;
+        return {
+            id: item.order_item_id,
+            product_id: item.product_id,
+            product_name: item.product_name,
+            size: item.size,
+            quantity,
+            price: price.toFixed(2),
+            tax: itemTax.toFixed(2),
+            subtotal: itemSubtotal.toFixed(2),
+            item_tax: totalTax.toFixed(2),
+            total: itemTotal.toFixed(2)
+        };
+    });
+
+    const grandTotal = Number(invoice.total_amount) || 0;
+
+    const discount = Math.max(
+        0,
+        subtotal + tax - grandTotal
+    );
 
     return {
-        invoice,
-        items: itemsResult.rows,
+        invoice: {
+            id: invoice.invoice_id,
+            invoice_number: invoice.invoice_number,
+            order_id: invoice.order_id,
+            order_date: invoice.order_date,
+            payment_status: invoice.payment_status,
+            order_status: invoice.order_status,
+            shipping_address: invoice.shipping_address
+        },
+
+        billing: {
+            user_id: invoice.user_id,
+            name: `${invoice.first_name || ""} ${invoice.last_name || ""}`.trim(),
+            email: invoice.email,
+            phone: invoice.phone
+        },
+
+        items,
 
         summary: {
             subtotal: subtotal.toFixed(2),
             discount: discount.toFixed(2),
             tax: tax.toFixed(2),
-            total: total.toFixed(2)
+            grand_total: grandTotal.toFixed(2)
         }
     };
 }

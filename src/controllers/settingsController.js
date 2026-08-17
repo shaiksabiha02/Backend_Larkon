@@ -3,7 +3,7 @@ import {
     updateGeneralSettings,
     getAdminProfile,
     updateAdminProfile,
-    changeAdminPassword
+    changeUserPassword
 } from "../services/settingsService.js";
 
 // GET general settings
@@ -109,13 +109,13 @@ export async function editAdminProfile(req, res) {
     }
 }
 
-// Changing admin password
-export async function changeAdminPasswordController(req, res) {
+// Changing user password
+export async function changePasswordController(req, res) {
+    console.log("PASSWORD CONTROLLER HIT");
+    console.log("req.user:", req.user);
+
     try {
-        const {
-            currentPassword,
-            newPassword
-        } = req.body;
+        const { currentPassword, newPassword } = req.body;
 
         if (!currentPassword || !newPassword) {
             return res.status(400).json({
@@ -131,7 +131,7 @@ export async function changeAdminPasswordController(req, res) {
             });
         }
 
-        const result = await changeAdminPassword(
+        const result = await changeUserPassword(
             req.user.id,
             currentPassword,
             newPassword
@@ -140,7 +140,7 @@ export async function changeAdminPasswordController(req, res) {
         if (result.type === "not_found") {
             return res.status(404).json({
                 success: false,
-                message: "Admin not found"
+                message: "User not found"
             });
         }
 
@@ -157,7 +157,7 @@ export async function changeAdminPasswordController(req, res) {
         });
 
     } catch (error) {
-        console.error("Error changing admin password:", error);
+        console.error("Error changing password:", error);
 
         return res.status(500).json({
             success: false,
