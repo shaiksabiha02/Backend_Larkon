@@ -50,7 +50,6 @@ export async function getInvoices() {
             paidInvoice: Number(summaryResult.rows[0].paid_invoice),
             inactiveInvoice: Number(summaryResult.rows[0].inactive_invoice)
         },
-
         invoices: invoicesResult.rows
     };
 }
@@ -66,6 +65,7 @@ export async function getInvoiceById(id) {
             i.orders_id AS order_id,
 
             o.created_at AS order_date,
+            o.total_amount,
             o.payment_status,
             o.status AS order_status,
             o.shipping_address,
@@ -93,9 +93,6 @@ export async function getInvoiceById(id) {
 
     const invoice = invoiceResult.rows[0];
 
-
-    // Get order items
-    // Tax is taken from order_items.tax
     const itemsResult = await pool.query(
         `
         SELECT
@@ -105,7 +102,7 @@ export async function getInvoiceById(id) {
             p.size,
             oi.quantity,
             oi.price,
-            oi.tax
+            COALESCE(oi.tax, 0) AS tax
 
         FROM order_items oi
         JOIN products p
@@ -118,142 +115,39 @@ export async function getInvoiceById(id) {
         [invoice.order_id]
     );
 
-
-    // Calculate subtotal and tax
     let subtotal = 0;
     let tax = 0;
 
-    for (const item of itemsResult.rows) {
-        const itemSubtotal =
-            Number(item.price) * Number(item.quantity);
+    const items = itemsResult.rows.map(item => {
+        const price = Number(item.price) || 0;
+        const quantity = Number(item.quantity) || 0;
+        const itemTax = Number(item.tax) || 0;
 
-        const itemTax =
-            Number(item.tax) * Number(item.quantity);
+        const itemSubtotal = price * quantity;
+        const totalTax = itemTax * quantity;
+        const itemTotal = itemSubtotal + totalTax;
 
         subtotal += itemSubtotal;
-        tax += itemTax;
-    }
-
-
-    // Find active coupon
-    const couponResult = await pool.query(
-        `
-        SELECT DISTINCT
-            c.id,
-            c.coupon_code,
-            c.coupon_type,
-            c.discount_value,
-            c.minimum_order_amount,
-            c.maximum_discount_amount
-
-        FROM coupons c
-        JOIN coupon_products cp
-            ON c.id = cp.coupon_id
-        JOIN order_items oi
-            ON cp.product_id = oi.product_id
-
-        WHERE oi.order_id = $1
-          AND c.status = 'Active'
-          AND c.start_date <= CURRENT_TIMESTAMP
-          AND c.end_date >= CURRENT_TIMESTAMP
-          AND (
-              c.usage_limit IS NULL
-              OR c.used_count < c.usage_limit
-          )
-
-        ORDER BY c.id
-        LIMIT 1
-        `,
-        [invoice.order_id]
-    );
-
-
-    let discount = 0;
-    let appliedCoupon = null;
-
-
-    // Calculate coupon discount
-    if (couponResult.rows.length > 0) {
-        const coupon = couponResult.rows[0];
-
-        const minimumOrderAmount =
-            Number(coupon.minimum_order_amount || 0);
-
-        // Coupon applies only if minimum order amount is reached
-        if (subtotal >= minimumOrderAmount) {
-
-            // Percentage coupon
-            if (coupon.coupon_type === "percentage") {
-                discount =
-                    subtotal *
-                    (Number(coupon.discount_value) / 100);
-            }
-
-            // Fixed coupon
-            else if (coupon.coupon_type === "fixed") {
-                discount =
-                    Number(coupon.discount_value);
-            }
-
-
-            // Apply maximum discount limit
-            if (
-                coupon.maximum_discount_amount !== null &&
-                discount >
-                    Number(coupon.maximum_discount_amount)
-            ) {
-                discount =
-                    Number(coupon.maximum_discount_amount);
-            }
-
-
-            // Discount cannot exceed subtotal
-            if (discount > subtotal) {
-                discount = subtotal;
-            }
-
-
-            appliedCoupon = {
-                coupon_code: coupon.coupon_code,
-                coupon_type: coupon.coupon_type,
-                discount_value: Number(
-                    coupon.discount_value
-                ).toFixed(2)
-            };
-        }
-    }
-
-
-    // Prepare invoice items
-    const items = itemsResult.rows.map(item => {
-
-        const itemSubtotal =
-            Number(item.price) * Number(item.quantity);
-
-        const itemTax =
-            Number(item.tax) * Number(item.quantity);
-
-        // Item total before invoice-level coupon
-        const itemTotal =
-            itemSubtotal + itemTax;
+        tax += totalTax;
 
         return {
             id: item.order_item_id,
             product_id: item.product_id,
             product_name: item.product_name,
             size: item.size,
-            quantity: item.quantity,
-            price: Number(item.price).toFixed(2),
-            tax: Number(item.tax).toFixed(2),
+            quantity,
+            price: price.toFixed(2),
+            tax: itemTax.toFixed(2),
             total: itemTotal.toFixed(2)
         };
     });
 
+    const grandTotal = Number(invoice.total_amount) || 0;
 
-    // Final invoice calculation
-    const grandTotal =
-        subtotal - discount + tax;
-
+    const discount = Math.max(
+        0,
+        subtotal + tax - grandTotal
+    );
 
     return {
         invoice: {
@@ -268,14 +162,12 @@ export async function getInvoiceById(id) {
 
         billing: {
             user_id: invoice.user_id,
-            name: `${invoice.first_name} ${invoice.last_name}`,
+            name: `${invoice.first_name || ""} ${invoice.last_name || ""}`.trim(),
             email: invoice.email,
             phone: invoice.phone
         },
 
         items,
-
-        coupon: appliedCoupon,
 
         summary: {
             subtotal: subtotal.toFixed(2),
@@ -317,7 +209,6 @@ export async function sendInvoiceEmail(id) {
         `Mock email sent to ${invoice.email} for invoice ${invoice.invoice_number}`
     );
 
-
     const logResult = await pool.query(
         `
         INSERT INTO invoice_email_logs
@@ -341,7 +232,6 @@ export async function sendInvoiceEmail(id) {
         ]
     );
 
-
     return {
         invoice_id: invoice.id,
         invoice_number: invoice.invoice_number,
@@ -362,10 +252,12 @@ export async function generateInvoicePDF(id) {
             i.orders_id AS order_id,
 
             o.created_at AS order_date,
+            o.total_amount,
             o.payment_status,
             o.status AS order_status,
             o.shipping_address,
 
+            u.id AS user_id,
             u.first_name,
             u.last_name,
             u.email,
@@ -388,9 +280,6 @@ export async function generateInvoicePDF(id) {
 
     const invoice = invoiceResult.rows[0];
 
-
-    // Get order items
-    // Tax is taken from order_items.tax
     const itemsResult = await pool.query(
         `
         SELECT
@@ -400,7 +289,7 @@ export async function generateInvoicePDF(id) {
             p.size,
             oi.quantity,
             oi.price,
-            oi.tax
+            COALESCE(oi.tax, 0) AS tax
 
         FROM order_items oi
         JOIN products p
@@ -413,143 +302,41 @@ export async function generateInvoicePDF(id) {
         [invoice.order_id]
     );
 
-
-    // Calculate subtotal and tax
     let subtotal = 0;
     let tax = 0;
 
-    for (const item of itemsResult.rows) {
-        const itemSubtotal =
-            Number(item.price) * Number(item.quantity);
+    const items = itemsResult.rows.map(item => {
+        const price = Number(item.price) || 0;
+        const quantity = Number(item.quantity) || 0;
+        const itemTax = Number(item.tax) || 0;
 
-        const itemTax =
-            Number(item.tax) * Number(item.quantity);
+        const itemSubtotal = price * quantity;
+        const totalTax = itemTax * quantity;
+        const itemTotal = itemSubtotal + totalTax;
 
         subtotal += itemSubtotal;
-        tax += itemTax;
-    }
-
-
-    // Find active coupon
-    const couponResult = await pool.query(
-        `
-        SELECT DISTINCT
-            c.id,
-            c.coupon_code,
-            c.coupon_type,
-            c.discount_value,
-            c.minimum_order_amount,
-            c.maximum_discount_amount
-
-        FROM coupons c
-        JOIN coupon_products cp
-            ON c.id = cp.coupon_id
-        JOIN order_items oi
-            ON cp.product_id = oi.product_id
-
-        WHERE oi.order_id = $1
-          AND c.status = 'Active'
-          AND c.start_date <= CURRENT_TIMESTAMP
-          AND c.end_date >= CURRENT_TIMESTAMP
-          AND (
-              c.usage_limit IS NULL
-              OR c.used_count < c.usage_limit
-          )
-
-        ORDER BY c.id
-        LIMIT 1
-        `,
-        [invoice.order_id]
-    );
-
-
-    let discount = 0;
-    let appliedCoupon = null;
-
-
-    // Calculate coupon discount
-    if (couponResult.rows.length > 0) {
-        const coupon = couponResult.rows[0];
-
-        const minimumOrderAmount =
-            Number(coupon.minimum_order_amount || 0);
-
-        // Coupon applies only if minimum order amount is reached
-        if (subtotal >= minimumOrderAmount) {
-
-            // Percentage coupon
-            if (coupon.coupon_type === "percentage") {
-                discount =
-                    subtotal *
-                    (Number(coupon.discount_value) / 100);
-            }
-
-            // Fixed coupon
-            else if (coupon.coupon_type === "fixed") {
-                discount =
-                    Number(coupon.discount_value);
-            }
-
-
-            // Apply maximum discount limit
-            if (
-                coupon.maximum_discount_amount !== null &&
-                discount >
-                    Number(coupon.maximum_discount_amount)
-            ) {
-                discount =
-                    Number(coupon.maximum_discount_amount);
-            }
-
-
-            // Discount cannot exceed subtotal
-            if (discount > subtotal) {
-                discount = subtotal;
-            }
-
-
-            appliedCoupon = {
-                coupon_code: coupon.coupon_code,
-                coupon_type: coupon.coupon_type,
-                discount_value: Number(
-                    coupon.discount_value
-                ).toFixed(2)
-            };
-        }
-    }
-
-
-    // Prepare PDF items
-    const items = itemsResult.rows.map(item => {
-
-        const itemSubtotal =
-            Number(item.price) * Number(item.quantity);
-
-        const itemTax =
-            Number(item.tax) * Number(item.quantity);
-
-        const itemTotal =
-            itemSubtotal + itemTax;
+        tax += totalTax;
 
         return {
             id: item.order_item_id,
             product_id: item.product_id,
             product_name: item.product_name,
             size: item.size,
-            quantity: item.quantity,
-            price: Number(item.price).toFixed(2),
-            tax: Number(item.tax).toFixed(2),
+            quantity,
+            price: price.toFixed(2),
+            tax: itemTax.toFixed(2),
             subtotal: itemSubtotal.toFixed(2),
-            item_tax: itemTax.toFixed(2),
+            item_tax: totalTax.toFixed(2),
             total: itemTotal.toFixed(2)
         };
     });
 
+    const grandTotal = Number(invoice.total_amount) || 0;
 
-    // Final invoice calculation
-    const grandTotal =
-        subtotal - discount + tax;
-
+    const discount = Math.max(
+        0,
+        subtotal + tax - grandTotal
+    );
 
     return {
         invoice: {
@@ -563,14 +350,13 @@ export async function generateInvoicePDF(id) {
         },
 
         billing: {
-            name: `${invoice.first_name} ${invoice.last_name}`,
+            user_id: invoice.user_id,
+            name: `${invoice.first_name || ""} ${invoice.last_name || ""}`.trim(),
             email: invoice.email,
             phone: invoice.phone
         },
 
         items,
-
-        coupon: appliedCoupon,
 
         summary: {
             subtotal: subtotal.toFixed(2),

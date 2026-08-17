@@ -139,10 +139,10 @@ export async function updateAdminProfile(userId, data) {
     return result.rows[0];
 }
 
-// Changing admin password
-export async function changeAdminPassword(userId, currentPassword, newPassword) {
 
-    // 1. Get the existing hashed password
+// Changing user password
+export async function changeUserPassword(userId, currentPassword, newPassword) {
+
     const userResult = await pool.query(
         `
         SELECT password
@@ -161,7 +161,6 @@ export async function changeAdminPassword(userId, currentPassword, newPassword) 
 
     const storedPassword = userResult.rows[0].password;
 
-    // 2. Check current password
     const isMatch = await bcrypt.compare(
         currentPassword,
         storedPassword
@@ -174,10 +173,8 @@ export async function changeAdminPassword(userId, currentPassword, newPassword) 
         };
     }
 
-    // 3. Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // 4. Update password
     await pool.query(
         `
         UPDATE users
@@ -191,3 +188,4 @@ export async function changeAdminPassword(userId, currentPassword, newPassword) 
         success: true
     };
 }
+
