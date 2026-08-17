@@ -17,6 +17,17 @@ const doc = {
 
     schemes: ["http"],
 
+    securityDefinitions: {
+        bearerAuth: {
+            type: "apiKey",
+            scheme: "Authorization",
+            in: "header",
+            description: "Enter: Bearer <your JWT access token>"
+            
+        }
+
+        
+        },
     consumes: ["application/json"],
 
     produces: ["application/json"],

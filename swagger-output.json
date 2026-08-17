@@ -44,12 +44,16 @@
   "schemes": [
     "http"
   ],
-  "consumes": [
-    "application/json"
-  ],
-  "produces": [
-    "application/json"
-  ],
+
+  "securityDefinitions": {
+    "bearerAuth": {
+      "type": "apiKey",
+      "scheme": "Authorization",
+      "in": "header",
+      "description": "Enter: Bearer <your JWT access token>"
+    }
+  },
+
   "paths": {
     "/api/v1/products/": {
       "post": {
