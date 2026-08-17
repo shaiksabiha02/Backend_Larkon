@@ -44,6 +44,14 @@
   "schemes": [
     "http"
   ],
+  "securityDefinitions": {
+    "bearerAuth": {
+      "type": "apiKey",
+      "scheme": "Authorization",
+      "in": "header",
+      "description": "Enter: Bearer <your JWT access token>"
+    }
+  },
   "paths": {
     "/api/v1/products/": {
       "post": {
@@ -4815,7 +4823,7 @@
         }
       }
     },
-    "/api/v1/inventory-warehouses": {
+    "/api/v1/warehouses": {
       "get": {
         "description": "",
         "parameters": [
@@ -4836,9 +4844,30 @@
             "description": "Internal Server Error"
           }
         }
+      },
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        }
       }
     },
-    "/api/v1/inventory-warehouses/{id}": {
+    "/api/v1/warehouses/{id}": {
       "get": {
         "description": "",
         "parameters": [
@@ -4868,32 +4897,7 @@
             "description": "Internal Server Error"
           }
         }
-      }
-    },
-    "/api/v1/warehouses": {
-      "post": {
-        "description": "",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "type": "string"
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": "Created"
-          },
-          "401": {
-            "description": "Unauthorized"
-          },
-          "500": {
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/api/v1/warehouses/{id}": {
+      },
       "put": {
         "description": "",
         "parameters": [
