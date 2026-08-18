@@ -69,7 +69,7 @@ export const removeCartItem = async (req, res) => {
        RETURNING *`,
       [itemId, userId]
     );
-ం
+
     if (result.rowCount === 0) {
       return res.status(404).json({
         success: false,
