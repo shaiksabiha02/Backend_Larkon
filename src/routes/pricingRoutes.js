@@ -1,5 +1,5 @@
 import express from "express";
-import {fetchPricingPlans} from "../Controllers/pricingController.js";
+import {fetchPricingPlans} from "../controllers/pricingController.js";
 
 const router=express.Router();
 
