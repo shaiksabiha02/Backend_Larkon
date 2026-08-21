@@ -6,7 +6,7 @@ import {
     fetchAdminProfile,
     editAdminProfile,
     changePasswordController
-} from "../Controllers/settingsController.js";
+} from "../controllers/settingsController.js";
 
 import { authenticate } from "../middlewares/auth.middleware.js";
 
