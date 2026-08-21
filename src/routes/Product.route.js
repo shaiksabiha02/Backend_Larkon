@@ -10,7 +10,7 @@ import {
     uploadProductImages,
     updateProductStatus,
     importProducts
-} from "../controllers/Product.controller.js";
+} from "../controllers/product.controller.js";
 
 import upload from "../middlewares/upload.middleware.js";
 
