@@ -1,5 +1,5 @@
 import * as ProductModel from "../models/Product.model.js";
-import * as ProductService from "../services/Product.service.js";
+import * as ProductService from "../services/product.service.js";
 import cloudinary from "../config/cloudinary.js";
 import csvParser from "csv-parser";
 import XLSX from "xlsx";
